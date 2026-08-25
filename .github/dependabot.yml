@@ -4,7 +4,17 @@ updates:
     directory: /android
     schedule:
       interval: monthly
+    open-pull-requests-limit: 2
+    groups:
+      android-dependencies:
+        patterns:
+          - "*"
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
+    open-pull-requests-limit: 2
+    groups:
+      github-actions:
+        patterns:
+          - "*"
