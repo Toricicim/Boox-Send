@@ -27,6 +27,46 @@ Bluetooth, without a cloud service, internet connection, or cable.
 BOOX Send is not a folder synchronization tool. It sends only files explicitly
 selected by the user and never mirrors deletions.
 
+## How it works and why it stays idle
+
+The Finder action stages selected files in a local Mac queue. The sender uses
+SDP for service discovery and a custom RFCOMM service over Bluetooth Classic
+BR/EDR for the byte stream—there is no BLE/GATT transport, internet service, or
+cloud relay. See Android’s
+[`BluetoothServerSocket` documentation](https://developer.android.com/reference/android/bluetooth/BluetoothServerSocket).
+
+On the BOOX, an Android Companion Device presence event starts a short-lived
+`connectedDevice` foreground service. It accepts the RFCOMM session, verifies
+the file with SHA-256, and stops after 15 seconds without another connection.
+Companion association does not itself create a connection or enable continuous
+application scanning; see the official
+[Companion Device documentation](https://developer.android.com/develop/connectivity/bluetooth/companion-device-pairing).
+
+BOOX Send schedules no periodic Bluetooth scan, WorkManager task, job, alarm,
+timer, or refresh loop and keeps no permanent foreground service or socket.
+Hardware checks confirmed that no BOOX Send service remained running while
+idle. This minimizes the app’s idle overhead, but it does not make Bluetooth
+free: keeping the system radio enabled still has a firmware-dependent baseline
+cost. No controlled multi-day battery percentage claim is currently made. The
+design follows Android’s advice to wake for device presence instead of
+periodically waking the app to scan; see the
+[background Bluetooth guide](https://developer.android.com/develop/connectivity/bluetooth/ble/background).
+
+## Distribution without paid certificates
+
+- **Android/BOOX:** APK signing is required but free. A self-generated release
+  keystore can be stored as GitHub Actions secrets so every update uses the same
+  identity.
+- **macOS:** Apple-recognized Developer ID signing and notarization require a
+  paid Apple Developer membership. The free recommended path is to build
+  locally with `./scripts/install-macos.sh`. The ad-hoc release ZIP also works,
+  but macOS can require **Privacy & Security → Open Anyway** on first launch.
+  Follow [Apple’s guidance](https://support.apple.com/guide/mac-help/mh40616/mac)
+  and override the warning only for source you trust.
+
+Paid Apple signing improves the downloaded-binary experience; it is not needed
+for source installation or Bluetooth transfers.
+
 ## Compatibility
 
 - Hardware-tested on a **BOOX Go 10.3 with Android 12-based firmware**.

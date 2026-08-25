@@ -29,6 +29,59 @@ cihazının `Books` klasörüne gönderin.
 Bu bir klasör eşitleme uygulaması değildir. Mac’ten silinen dosyaları BOOX’tan
 silmez; yalnızca kullanıcının açıkça seçtiği dosyaları gönderir.
 
+## Nasıl çalışır?
+
+```text
+Finder Hızlı İşlemi
+        ↓
+Mac'teki yerel dosya kuyruğu
+        ↓  Bluetooth Classic / SDP + RFCOMM
+Android Companion Device olayı
+        ↓
+Kısa ömürlü connectedDevice servisi
+        ↓
+BOOX Books klasörü + SHA-256 doğrulaması
+```
+
+1. Finder Hızlı İşlemi seçilen dosyaları Mac’teki yerel kuyruğa kopyalar ve
+   menü çubuğu uygulamasını haberdar eder.
+2. Mac yalnızca önceden eşleştirilmiş BOOX’a bağlanır. Hizmet keşfi için SDP,
+   dosya akışı için **Bluetooth Classic BR/EDR üzerinde RFCOMM** kullanılır.
+   RFCOMM, seri bağlantı benzeri, bağlantı odaklı bir byte akışıdır; BLE/GATT
+   veya internet kullanılmaz. Android’in RFCOMM açıklaması için
+   [`BluetoothServerSocket` belgesine](https://developer.android.com/reference/android/bluetooth/BluetoothServerSocket)
+   bakabilirsiniz.
+3. BOOX’ta Android’in Companion Device association’ı Mac’in varlık olayını
+   uygulamaya iletir. Bu association tek başına bağlantı kurmaz veya sürekli
+   uygulama taraması başlatmaz; yalnızca işletim sisteminin uygulamayı olay
+   geldiğinde uyandırabilmesini sağlar. Ayrıntı:
+   [Android Companion Device](https://developer.android.com/develop/connectivity/bluetooth/companion-device-pairing).
+4. BOOX Send yalnızca bu olay üzerine `connectedDevice` türünde bir foreground
+   service açar, RFCOMM bağlantısını kabul eder ve dosyayı yazar.
+5. Dosya boyutu ve SHA-256 özeti doğrulandıktan sonra aktarım tamamlanır. Yeni
+   bağlantı gelmezse alıcı 15 saniye içinde kendisini durdurur.
+
+## Pil kullanımı
+
+BOOX Send “sürekli arka planda çalışan” bir uygulama olarak tasarlanmamıştır:
+
+- Uygulama seviyesinde periyodik Bluetooth taraması yoktur.
+- `WorkManager`, zamanlanmış job, alarm, timer veya yenileme döngüsü yoktur.
+- Sürekli açık RFCOMM soketi veya foreground service yoktur.
+- Uygulama süreci kapalıyken varlık takibini Android’in Companion Device sistemi
+  yönetir; Android de cihaz yokken uygulamayı periyodik uyandıran taramaları
+  önermemektedir. Resmî arka plan önerileri:
+  [Android Bluetooth background guide](https://developer.android.com/develop/connectivity/bluetooth/ble/background).
+- Foreground service yalnızca Mac bağlantı kurduğunda ve dosya aktarılırken
+  görünür; 15 saniyelik boşta bekleme sonunda kapanır.
+- Donanım testinde boşta `dumpsys` ile çalışan BOOX Send servisi, job veya alarm
+  kalmadığı doğrulandı.
+
+Bu, uygulamanın boşta ek tüketimini en aza indirir; “Bluetooth’un sıfır pil
+tüketmesi” anlamına gelmez. BOOX’ta Bluetooth’un açık tutulmasının firmware ve
+radyo kaynaklı taban tüketimi vardır. Ayrıca henüz kontrollü, çok günlük bir pil
+benchmark’ı yayımlanmadığı için kesin yüzde tasarruf iddiasında bulunmuyoruz.
+
 ## Destek durumu
 
 - Donanım üzerinde doğrulandı: **BOOX Go 10.3 / Android 12 tabanlı firmware**.
@@ -37,6 +90,28 @@ silmez; yalnızca kullanıcının açıkça seçtiği dosyaları gönderir.
 - Diğer Android 12+ BOOX modellerinde çalışabilir ancak henüz doğrulanmamıştır.
 - BOOX tamamen kapalıysa Bluetooth ile açılamaz. Cihaz açık veya uyku halinde,
   Bluetooth etkin olmalıdır.
+
+## Ücretli imza olmadan dağıtım
+
+İki platformun durumu farklıdır:
+
+- **Android/BOOX:** Ücretli hesap gerekmez. Android APK’ları imzalı olmak
+  zorundadır ama bu anahtar ücretsiz olarak `keytool` ile üretilebilir. GitHub
+  Actions aynı özel anahtarı secret olarak kullanır; böylece sonraki sürümler
+  mevcut uygulamanın üzerine güncelleme olarak kurulabilir. Anahtar depoya
+  eklenmez ve kaybedilmemelidir.
+- **macOS:** Apple’ın tanıdığı Developer ID imzası ve noterleme ücretli Apple
+  Developer üyeliği gerektirir. Üyelik olmadan önerilen ücretsiz yöntem,
+  kullanıcının kaynak koddan `./scripts/install-macos.sh` çalıştırıp uygulamayı
+  kendi Mac’inde oluşturmasıdır. Hazır ad-hoc imzalı ZIP de kullanılabilir ancak
+  macOS ilk açılışta uyarı gösterebilir; kullanıcı yalnızca kaynağa güveniyorsa
+  **Sistem Ayarları → Gizlilik ve Güvenlik → Yine de Aç** yolunu kullanmalıdır.
+  Apple’ın açıklaması: [bilinmeyen geliştiriciden uygulama açma](https://support.apple.com/guide/mac-help/mh40616/mac).
+
+Bu proje ücretli sertifika olmadan tamamen kullanılabilir. Ücretli Apple
+sertifikası yalnızca hazır Mac paketini daha pürüzsüz ve doğrulanabilir hâle
+getirir; kaynak koddan kurulumu veya Bluetooth aktarımını açan bir lisans
+değildir.
 
 ## En kolay kurulum
 

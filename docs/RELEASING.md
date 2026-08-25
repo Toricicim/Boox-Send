@@ -13,6 +13,9 @@ Update these values together:
 Create one release keystore and keep it outside the repository. Losing it means
 users cannot install a future APK as an update.
 
+Creating and using this Android key is free and does not require a Google Play
+or other paid developer account.
+
 ```sh
 keytool -genkeypair -v -keystore boox-send-release.jks \
   -alias boox-send -keyalg RSA -keysize 4096 -validity 10000
@@ -32,6 +35,11 @@ Never commit the keystore.
 `scripts/package-release.sh` creates an ad-hoc signed universal ZIP by default.
 This is suitable for source testing, but public binary releases should be
 signed with an Apple **Developer ID Application** certificate and notarized.
+
+If you do not want a paid Apple Developer membership, publish the source
+installer as the primary Mac installation method. You may still attach the
+ad-hoc ZIP for users who understand the Gatekeeper warning; never instruct
+users to disable Gatekeeper globally.
 
 To sign locally before packaging:
 
