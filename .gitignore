@@ -1,0 +1,16 @@
+.DS_Store
+/build/
+DerivedData/
+macos/BooxSend.xcodeproj/
+android/.gradle/
+android/build/
+android/local.properties
+android/app/build/
+*.xcuserstate
+.idea/
+*.jks
+*.keystore
+*.p12
+*.cer
+*.mobileprovision
+.env

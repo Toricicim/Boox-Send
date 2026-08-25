@@ -1,0 +1,44 @@
+name: Bug report
+description: Report a reproducible BOOX Send problem
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include setup codes, Bluetooth addresses, or private files.
+  - type: input
+    id: mac
+    attributes:
+      label: Mac and macOS version
+      placeholder: MacBook Air M3, macOS 15.6
+    validations:
+      required: true
+  - type: input
+    id: boox
+    attributes:
+      label: BOOX model and firmware
+      placeholder: BOOX Go 10.3, firmware 4.x
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installation method
+      options:
+        - GitHub Release
+        - Source installer
+        - Manual/Xcode
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: Tell us what you selected, what you clicked, and what happened.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      render: shell

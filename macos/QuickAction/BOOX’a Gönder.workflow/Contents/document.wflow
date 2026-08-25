@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>actions</key>
+  <array>
+    <dict>
+      <key>action</key>
+      <dict>
+        <key>ActionBundlePath</key><string>/System/Library/Automator/Run AppleScript.action</string>
+        <key>ActionName</key><string>Run AppleScript</string>
+        <key>ActionParameters</key>
+        <dict>
+          <key>source</key>
+          <string>on run {input, parameters}
+    set commandText to quoted form of "/Applications/BOOX Send.app/Contents/Helpers/BooxSendQueue"
+    repeat with selectedItem in input
+        set commandText to commandText &amp; " " &amp; quoted form of POSIX path of selectedItem
+    end repeat
+    do shell script commandText
+    do shell script "/usr/bin/open 'booxsend://queue'"
+    return input
+end run</string>
+        </dict>
+        <key>AMAccepts</key>
+        <dict>
+          <key>Container</key><string>List</string>
+          <key>Optional</key><true/>
+          <key>Types</key><array><string>com.apple.applescript.object</string></array>
+        </dict>
+        <key>AMActionVersion</key><string>1.0.2</string>
+        <key>AMApplication</key><array><string>Automator</string></array>
+        <key>AMParameterProperties</key><dict><key>source</key><dict/></dict>
+        <key>AMProvides</key>
+        <dict>
+          <key>Container</key><string>List</string>
+          <key>Types</key><array><string>com.apple.applescript.object</string></array>
+        </dict>
+        <key>arguments</key>
+        <dict>
+          <key>0</key>
+          <dict>
+            <key>default value</key><string></string>
+            <key>name</key><string>source</string>
+            <key>required</key><string>0</string>
+            <key>type</key><string>0</string>
+            <key>uuid</key><string>0</string>
+          </dict>
+        </dict>
+        <key>BundleIdentifier</key><string>com.apple.Automator.RunScript</string>
+        <key>CanShowSelectedItemsWhenRun</key><false/>
+        <key>CanShowWhenRun</key><true/>
+        <key>Category</key><array><string>AMCategoryUtilities</string></array>
+        <key>CFBundleVersion</key><string>1.0.2</string>
+        <key>Class Name</key><string>RunScriptAction</string>
+        <key>InputUUID</key><string>18C676F8-5EBF-47BA-99C5-34FF0936BB45</string>
+        <key>isViewVisible</key><integer>1</integer>
+        <key>Keywords</key><array><string>Run</string></array>
+        <key>location</key><string>309.000000:368.000000</string>
+        <key>nibPath</key><string>/System/Library/Automator/Run AppleScript.action/Contents/Resources/Base.lproj/main.nib</string>
+        <key>OutputUUID</key><string>0D86839A-D3A6-4826-97C9-A37A4F65CCCF</string>
+        <key>UnlocalizedApplications</key><array><string>Automator</string></array>
+        <key>UUID</key><string>7401F6ED-D67C-4EB0-984F-BF40D0CDA041</string>
+      </dict>
+      <key>isViewVisible</key><integer>1</integer>
+    </dict>
+  </array>
+  <key>AMApplicationBuild</key><string>526</string>
+  <key>AMApplicationVersion</key><string>2.10</string>
+  <key>AMDocumentVersion</key><string>2</string>
+  <key>connectors</key><dict/>
+  <key>workflowMetaData</key>
+  <dict>
+    <key>serviceApplicationBundleID</key><string>com.apple.finder</string>
+    <key>serviceApplicationPath</key><string>/System/Library/CoreServices/Finder.app</string>
+    <key>serviceInputTypeIdentifier</key><string>com.apple.Automator.fileSystemObject</string>
+    <key>serviceOutputTypeIdentifier</key><string>com.apple.Automator.nothing</string>
+    <key>serviceProcessesInput</key><true/>
+    <key>workflowTypeIdentifier</key><string>com.apple.Automator.servicesMenu</string>
+  </dict>
+</dict>
+</plist>
