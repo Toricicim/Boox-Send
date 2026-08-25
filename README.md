@@ -1,213 +1,181 @@
 # BOOX Send
 
-Mac’inizde bir dosyaya sağ tıklayıp **Hızlı İşlemler → BOOX’a Gönder** diyerek
-dosyayı internet, bulut veya kablo kullanmadan Bluetooth üzerinden BOOX Go 10.3
-cihazının `Books` klasörüne gönderin.
+Right-click one or more files on a Mac and choose **Quick Actions → BOOX’a
+Gönder** to transfer them to the `Books` folder of a BOOX Go 10.3 over
+Bluetooth, without a cloud service, internet connection, or cable.
 
-> Bu proje gerçek bir ihtiyaçtan doğdu: Mac’ten BOOX’a tek seferlik dosya
-> göndermek gereksiz derecede zahmetliydi. Yapay zekâ destekli **vibe coding**
-> yaklaşımıyla, gerçek cihaz üzerinde denenerek geliştirildi. Aynı ihtiyacı olan
-> insanlarla ücretsiz ve açık kaynak olarak paylaşılmak isteniyor. Kodun önemli
-> dosyalarda kullanılmadan önce gözden geçirilmesi ve test edilmesi önerilir.
+> This project grew out of a real need: sending an occasional file from a Mac
+> to a BOOX was needlessly awkward. It was developed with an AI-assisted
+> **vibe-coding** workflow and tested iteratively on real hardware. It is being
+> shared as free, open-source software for others with the same need. Review
+> and test the code before relying on it for important files.
 
-[English README](docs/README.en.md) · [Kurulum](docs/INSTALL.md) ·
-[Değişiklikler](CHANGELOG.md) · [Katkıda bulunma](CONTRIBUTING.md)
+[Turkish README](docs/README.tr.md) · [Installation](docs/INSTALL.en.md) ·
+[Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
-## Neler yapar?
+## Features
 
-- Finder’da tek veya birden fazla dosya için sağ tık menüsü ekler.
-- Dosyaları yalnızca eşleştirilmiş Mac ile BOOX arasında Bluetooth RFCOMM
-  üzerinden taşır; sunucu veya hesap gerekmez.
-- BOOX uygulaması kapalıyken Android Companion Device olayıyla kısa süreliğine
-  uyanabilir.
-- Aktarım kesilirse aynı kuyruk işi kaldığı yerden devam edebilir.
-- Dosya boyutunu ve SHA-256 özetini doğrular.
-- Aynı adlı dosyaları ezmek yerine `dosya (1).pdf` biçiminde adlandırır.
-- Son bağlantıdan sonra 15 saniye boşta kalan BOOX alıcısını kapatır; sürekli
-  tarama, zamanlayıcı veya periyodik yenileme yapmaz.
+- A Finder Quick Action for one or more selected files.
+- Bluetooth RFCOMM transfer directly between paired devices; no server or
+  account.
+- Event-driven wake-up through Android Companion Device presence callbacks.
+- Resume support for interrupted queue jobs and SHA-256 verification.
+- Collision-safe names such as `book (1).pdf` instead of overwriting files.
+- The BOOX receiver stops after 15 idle seconds and uses no periodic scan,
+  alarm, or refresh loop.
 
-Bu bir klasör eşitleme uygulaması değildir. Mac’ten silinen dosyaları BOOX’tan
-silmez; yalnızca kullanıcının açıkça seçtiği dosyaları gönderir.
+BOOX Send is not a folder synchronization tool. It sends only files explicitly
+selected by the user and never mirrors deletions.
 
-## Nasıl çalışır?
+## How it works
 
 ```text
-Finder Hızlı İşlemi
+Finder Quick Action
         ↓
-Mac'teki yerel dosya kuyruğu
+Local queue on the Mac
         ↓  Bluetooth Classic / SDP + RFCOMM
-Android Companion Device olayı
+Android Companion Device presence event
         ↓
-Kısa ömürlü connectedDevice servisi
+Short-lived connectedDevice service
         ↓
-BOOX Books klasörü + SHA-256 doğrulaması
+BOOX Books folder + SHA-256 verification
 ```
 
-1. Finder Hızlı İşlemi seçilen dosyaları Mac’teki yerel kuyruğa kopyalar ve
-   menü çubuğu uygulamasını haberdar eder.
-2. Mac yalnızca önceden eşleştirilmiş BOOX’a bağlanır. Hizmet keşfi için SDP,
-   dosya akışı için **Bluetooth Classic BR/EDR üzerinde RFCOMM** kullanılır.
-   RFCOMM, seri bağlantı benzeri, bağlantı odaklı bir byte akışıdır; BLE/GATT
-   veya internet kullanılmaz. Android’in RFCOMM açıklaması için
-   [`BluetoothServerSocket` belgesine](https://developer.android.com/reference/android/bluetooth/BluetoothServerSocket)
-   bakabilirsiniz.
-3. BOOX’ta Android’in Companion Device association’ı Mac’in varlık olayını
-   uygulamaya iletir. Bu association tek başına bağlantı kurmaz veya sürekli
-   uygulama taraması başlatmaz; yalnızca işletim sisteminin uygulamayı olay
-   geldiğinde uyandırabilmesini sağlar. Ayrıntı:
-   [Android Companion Device](https://developer.android.com/develop/connectivity/bluetooth/companion-device-pairing).
-4. BOOX Send yalnızca bu olay üzerine `connectedDevice` türünde bir foreground
-   service açar, RFCOMM bağlantısını kabul eder ve dosyayı yazar.
-5. Dosya boyutu ve SHA-256 özeti doğrulandıktan sonra aktarım tamamlanır. Yeni
-   bağlantı gelmezse alıcı 15 saniye içinde kendisini durdurur.
+The Finder action stages selected files in a local Mac queue. The sender uses
+SDP for service discovery and a custom RFCOMM service over Bluetooth Classic
+BR/EDR for the byte stream—there is no BLE/GATT transport, internet service, or
+cloud relay. See Android’s
+[`BluetoothServerSocket` documentation](https://developer.android.com/reference/android/bluetooth/BluetoothServerSocket).
 
-## Pil kullanımı
+On the BOOX, an Android Companion Device presence event starts a short-lived
+`connectedDevice` foreground service. It accepts the RFCOMM session, verifies
+the file with SHA-256, and stops after 15 seconds without another connection.
+Companion association does not itself create a connection or enable continuous
+application scanning; see the official
+[Companion Device documentation](https://developer.android.com/develop/connectivity/bluetooth/companion-device-pairing).
 
-BOOX Send “sürekli arka planda çalışan” bir uygulama olarak tasarlanmamıştır:
+## Battery behavior
 
-- Uygulama seviyesinde periyodik Bluetooth taraması yoktur.
-- `WorkManager`, zamanlanmış job, alarm, timer veya yenileme döngüsü yoktur.
-- Sürekli açık RFCOMM soketi veya foreground service yoktur.
-- Uygulama süreci kapalıyken varlık takibini Android’in Companion Device sistemi
-  yönetir; Android de cihaz yokken uygulamayı periyodik uyandıran taramaları
-  önermemektedir. Resmî arka plan önerileri:
-  [Android Bluetooth background guide](https://developer.android.com/develop/connectivity/bluetooth/ble/background).
-- Foreground service yalnızca Mac bağlantı kurduğunda ve dosya aktarılırken
-  görünür; 15 saniyelik boşta bekleme sonunda kapanır.
-- Donanım testinde boşta `dumpsys` ile çalışan BOOX Send servisi, job veya alarm
-  kalmadığı doğrulandı.
+BOOX Send schedules no periodic Bluetooth scan, WorkManager task, job, alarm,
+timer, or refresh loop and keeps no permanent foreground service or socket.
+Hardware checks confirmed that no BOOX Send service remained running while
+idle. This minimizes the app’s idle overhead, but it does not make Bluetooth
+free: keeping the system radio enabled still has a firmware-dependent baseline
+cost. No controlled multi-day battery percentage claim is currently made. The
+design follows Android’s advice to wake for device presence instead of
+periodically waking the app to scan; see the
+[background Bluetooth guide](https://developer.android.com/develop/connectivity/bluetooth/ble/background).
 
-Bu, uygulamanın boşta ek tüketimini en aza indirir; “Bluetooth’un sıfır pil
-tüketmesi” anlamına gelmez. BOOX’ta Bluetooth’un açık tutulmasının firmware ve
-radyo kaynaklı taban tüketimi vardır. Ayrıca henüz kontrollü, çok günlük bir pil
-benchmark’ı yayımlanmadığı için kesin yüzde tasarruf iddiasında bulunmuyoruz.
+## Distribution without paid certificates
 
-## Destek durumu
+- **Android/BOOX:** APK signing is required but free. A self-generated release
+  keystore can be stored as GitHub Actions secrets so every update uses the same
+  identity.
+- **macOS:** Apple-recognized Developer ID signing and notarization require a
+  paid Apple Developer membership. The free recommended path is to build
+  locally with `./scripts/install-macos.sh`. The ad-hoc release ZIP also works,
+  but macOS can require **Privacy & Security → Open Anyway** on first launch.
+  Follow [Apple’s guidance](https://support.apple.com/guide/mac-help/mh40616/mac)
+  and override the warning only for source you trust.
 
-- Donanım üzerinde doğrulandı: **BOOX Go 10.3 / Android 12 tabanlı firmware**.
-- Mac gereksinimi: **macOS 14 veya yenisi**, Bluetooth ve Apple Silicon ya da
-  Intel işlemci.
-- Diğer Android 12+ BOOX modellerinde çalışabilir ancak henüz doğrulanmamıştır.
-- BOOX tamamen kapalıysa Bluetooth ile açılamaz. Cihaz açık veya uyku halinde,
-  Bluetooth etkin olmalıdır.
+Paid Apple signing improves the downloaded-binary experience; it is not needed
+for source installation or Bluetooth transfers.
 
-## Ücretli imza olmadan dağıtım
+## Compatibility
 
-İki platformun durumu farklıdır:
+- Hardware-tested on a **BOOX Go 10.3 with Android 12-based firmware**.
+- Requires **macOS 14 or later** on Apple Silicon or Intel.
+- Other Android 12+ BOOX devices may work but are currently unverified.
+- A BOOX can be asleep, but it must be powered on with Bluetooth enabled.
 
-- **Android/BOOX:** Ücretli hesap gerekmez. Android APK’ları imzalı olmak
-  zorundadır ama bu anahtar ücretsiz olarak `keytool` ile üretilebilir. GitHub
-  Actions aynı özel anahtarı secret olarak kullanır; böylece sonraki sürümler
-  mevcut uygulamanın üzerine güncelleme olarak kurulabilir. Anahtar depoya
-  eklenmez ve kaybedilmemelidir.
-- **macOS:** Apple’ın tanıdığı Developer ID imzası ve noterleme ücretli Apple
-  Developer üyeliği gerektirir. Üyelik olmadan önerilen ücretsiz yöntem,
-  kullanıcının kaynak koddan `./scripts/install-macos.sh` çalıştırıp uygulamayı
-  kendi Mac’inde oluşturmasıdır. Hazır ad-hoc imzalı ZIP de kullanılabilir ancak
-  macOS ilk açılışta uyarı gösterebilir; kullanıcı yalnızca kaynağa güveniyorsa
-  **Sistem Ayarları → Gizlilik ve Güvenlik → Yine de Aç** yolunu kullanmalıdır.
-  Apple’ın açıklaması: [bilinmeyen geliştiriciden uygulama açma](https://support.apple.com/guide/mac-help/mh40616/mac).
+## Quick installation
 
-Bu proje ücretli sertifika olmadan tamamen kullanılabilir. Ücretli Apple
-sertifikası yalnızca hazır Mac paketini daha pürüzsüz ve doğrulanabilir hâle
-getirir; kaynak koddan kurulumu veya Bluetooth aktarımını açan bir lisans
-değildir.
+### From a GitHub Release
 
-## En kolay kurulum
-
-### GitHub sürüm paketinden
-
-1. GitHub’daki **Releases** sayfasından macOS ZIP dosyasını ve Android APK’yı
-   indirin.
-2. ZIP’i açıp `Install.command` dosyasına çift tıklayın. Apple imzasız bir test
-   sürümünde macOS engellerse dosyaya sağ tıklayıp **Aç** seçeneğini kullanın.
-3. APK’yı BOOX’a kopyalayıp açın veya USB hata ayıklama ile kurun:
+1. Download the universal macOS ZIP and Android APK from **Releases**.
+2. Extract the ZIP and double-click `Install.command`. For an ad-hoc build,
+   macOS may require **System Settings → Privacy & Security → Open Anyway**.
+3. Copy the APK to the BOOX and open it, or install it over USB debugging:
 
    ```sh
    adb install -r BOOX-Send-android.apk
    ```
 
-### Kaynak koddan tek komutla
+### One-command source installation
 
-Önce macOS’ta Xcode Command Line Tools’u kurun:
+Install Xcode Command Line Tools first:
 
 ```sh
 xcode-select --install
 ```
 
-Depoyu indirdikten sonra:
+After downloading the repository, run:
 
 ```sh
 ./scripts/install.sh
 ```
 
-Bu komut Mac uygulamasını ve Finder Hızlı İşlemini kurar. BOOX USB hata ayıklama
-ile bağlıysa Android uygulamasını da derleyip yükler. Yalnızca bir tarafı kurmak
-için:
+This installs the Mac app and Finder Quick Action. If exactly one BOOX is
+connected with USB debugging, it also builds and installs the Android app. To
+install each side separately:
 
 ```sh
 ./scripts/install-macos.sh
 ./scripts/install-boox.sh
 ```
 
-Android tarafını kaynak koddan kurmak için ayrıca JDK 17+, Android SDK 35 ve
-`adb` gerekir. Ayrıntılar ve sorun giderme için [kurulum rehberine](docs/INSTALL.md)
-bakın.
+Building the Android side also requires JDK 17+, Android SDK 35, and `adb`. See
+the complete [installation and troubleshooting guide](docs/INSTALL.en.md).
 
-## İlk kurulum
+## First-time setup
 
-1. Mac ve BOOX’u sistem Bluetooth ayarlarından normal şekilde eşleştirin.
-2. Mac’in menü çubuğundaki **BOOX** simgesinden Ayarlar’ı açın, eşleştirilmiş
-   BOOX’u seçin ve sekiz karakterli bir kod üretin.
-3. BOOX’ta BOOX Send’i açın, aynı kodu kaydedin.
-4. **Hedef Klasörü Seç** ile `Books` klasörünü seçin.
-5. **Mac’i Companion Cihaz Olarak Eşleştir** düğmesine basıp Mac’i seçin.
-6. BOOX uygulama ayarlarında Freeze’i kapatıp App Startup’ı açın. Uygulamanın
-   sürekli çalışan bir tarayıcısı yoktur.
+1. Pair the Mac and BOOX in their normal system Bluetooth settings.
+2. Open BOOX Send settings from the Mac menu bar, select the paired BOOX, and
+   generate an eight-character setup code.
+3. Open BOOX Send on the BOOX and save the same code.
+4. Select the `Books` destination folder.
+5. Associate the Mac as the companion device.
+6. Disable BOOX Freeze for the app and enable App Startup.
 
-Artık Finder’da dosyaya sağ tıklayıp **Hızlı İşlemler → BOOX’a Gönder**
-seçeneğini kullanabilirsiniz. BOOX ulaşılamıyorsa dosya Mac kuyruğunda kalır;
-menü çubuğundan **Tekrar Dene** seçilebilir.
+Use **Quick Actions → BOOX’a Gönder** in Finder. Unavailable transfers remain in
+the Mac queue and can be retried from the menu bar.
 
-## Geliştirme
+## Development
 
 ```sh
-make check          # kaynak kontrolleri ve testler
-make build-macos    # yerel mimari için Mac uygulaması
+make check          # source validation and tests
+make build-macos    # Mac app for the current architecture
 make build-android  # debug APK
-make package        # Apple Silicon + Intel macOS yayın ZIP'i
+make package        # universal Apple Silicon + Intel release ZIP
 ```
 
-Mac’in imzalı Finder extension hedefi XcodeGen projesinde korunmaktadır. Yerel
-ve açık kaynak kurulum, ücretli Apple Developer sertifikası gerektirmemek için
-daha güvenilir olan Automator Quick Action’ı kullanır.
+The signed Finder extension target remains available in the XcodeGen project.
+The free local installer uses the more reliable Automator Quick Action so it
+does not depend on a paid Apple signing identity.
 
-Docker ana kurulum yöntemi değildir: macOS uygulama imzası, Finder servisi,
-IOBluetooth ve fiziksel USB/ADB erişimi bir Linux konteynerinden sağlanamaz.
-Tekrarlanabilir kontroller GitHub Actions üzerinde çalışır.
+Docker is deliberately not the primary build path: macOS signing, Finder
+services, IOBluetooth, and physical USB/ADB access cannot be supplied by a Linux
+container. CI provides repeatable source checks instead.
 
-## Gizlilik ve güvenlik
+## Privacy and security
 
-- Bulut, telemetri, analiz veya kullanıcı hesabı yoktur.
-- Sekiz karakterli kod uygulama protokolünü HMAC-SHA256 ile doğrular.
-- İçerik uygulama katmanında ayrıca şifrelenmez; eşleştirilmiş Bluetooth
-  bağlantısının güvenliğine dayanır.
-- Dosyalar aktarım sonunda SHA-256 ile doğrulanır.
-- İmzalama anahtarlarını ve kurulum kodlarını depoya eklemeyin.
+There is no cloud component, account, telemetry, or analytics. The setup code
+authenticates the application protocol with HMAC-SHA256. File contents are not
+additionally encrypted at the application layer and rely on the paired
+Bluetooth link. See [SECURITY.md](SECURITY.md).
 
-Daha fazla bilgi: [SECURITY.md](SECURITY.md) ve [protokol tanımı](protocol/SPEC.md).
-
-## Kaldırma
+## Uninstallation
 
 ```sh
-./scripts/uninstall-macos.sh          # uygulamayı kaldır, kuyruk/ayarları koru
-./scripts/uninstall-macos.sh --purge  # kuyruk ve ayarları da Çöp'e taşı
-./scripts/uninstall-boox.sh           # BOOX uygulamasını ADB ile kaldır
+./scripts/uninstall-macos.sh          # keep the queue and settings
+./scripts/uninstall-macos.sh --purge  # move the queue and settings to Trash
+./scripts/uninstall-boox.sh           # uninstall from the BOOX through ADB
 ```
 
-Gönderilmiş kitaplar kaldırma sırasında silinmez.
+Files already delivered to the `Books` folder are never removed by these
+commands.
 
-## Lisans
+## License
 
-[MIT](LICENSE). Bu proje ONYX/BOOX veya Apple tarafından geliştirilmemiştir ve
-bu şirketlerle bağlantılı değildir. “BOOX” ilgili sahibinin ticari markasıdır.
+[MIT](LICENSE). This project is unofficial and is not affiliated with ONYX,
+BOOX, or Apple. BOOX is a trademark of its respective owner.
