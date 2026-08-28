@@ -2,10 +2,13 @@ package com.aliumutaltas.booxsend
 
 import android.content.Context
 import android.net.Uri
+import android.os.ParcelFileDescriptor
 import androidx.documentfile.provider.DocumentFile
 import org.json.JSONObject
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
 import java.security.MessageDigest
 import java.util.UUID
 import android.webkit.MimeTypeMap
@@ -13,8 +16,15 @@ import android.webkit.MimeTypeMap
 data class IncomingOffer(val id: UUID, val name: String, val size: Long, val sha256: String)
 data class Reservation(val offer: IncomingOffer, val partUri: Uri?, val destinationName: String, val offset: Long, val completed: Boolean)
 
-class TransferStorage(private val context: Context) {
+class TransferStorage(private val context: Context) : AutoCloseable {
+    private data class OpenWriter(
+        val stream: FileOutputStream,
+        val channel: FileChannel,
+        var offset: Long,
+    )
+
     private val prefs = context.getSharedPreferences(Constants.PREFS, Context.MODE_PRIVATE)
+    private val writers = mutableMapOf<UUID, OpenWriter>()
     private val root: DocumentFile
         get() {
             val value = prefs.getString(Constants.KEY_TREE_URI, null) ?: error("Destination folder is not configured")
@@ -58,21 +68,25 @@ class TransferStorage(private val context: Context) {
         require(!reservation.completed) { "Transfer is already completed" }
         require(offset >= 0 && offset + bytes.size <= reservation.offer.size) { "Chunk exceeds file size" }
         val uri = reservation.partUri ?: error("Partial document is missing")
-        val current = documentLength(uri)
-        require(current == offset) { "Non-contiguous chunk: expected $current, got $offset" }
-        context.contentResolver.openFileDescriptor(uri, "rw")!!.use { descriptor ->
-            FileOutputStream(descriptor.fileDescriptor).channel.use { channel ->
-                channel.position(offset)
-                channel.write(java.nio.ByteBuffer.wrap(bytes))
-                channel.force(false)
-            }
+        val writer = writers.getOrPut(reservation.offer.id) {
+            val current = documentLength(uri)
+            val descriptor = context.contentResolver.openFileDescriptor(uri, "rw")
+                ?: error("Could not open partial document")
+            val stream = ParcelFileDescriptor.AutoCloseOutputStream(descriptor)
+            val channel = stream.channel
+            channel.position(current)
+            OpenWriter(stream, channel, current)
         }
-        touch(reservation.offer.id)
+        require(writer.offset == offset) { "Non-contiguous chunk: expected ${writer.offset}, got $offset" }
+        val buffer = ByteBuffer.wrap(bytes)
+        while (buffer.hasRemaining()) writer.channel.write(buffer)
+        writer.offset += bytes.size
     }
 
     fun commit(reservation: Reservation): String {
         if (reservation.completed) return reservation.destinationName
         val uri = reservation.partUri ?: error("Partial document is missing")
+        closeWriter(reservation.offer.id)
         require(documentLength(uri) == reservation.offer.size) { "Received size does not match offer" }
         require(sha256(uri) == reservation.offer.sha256.lowercase()) { "SHA-256 verification failed" }
 
@@ -111,6 +125,7 @@ class TransferStorage(private val context: Context) {
     }
 
     fun reset(id: UUID) {
+        closeWriter(id)
         record(id)?.optString("partUri")?.takeIf { it.isNotBlank() }?.let { value ->
             runCatching { DocumentFile.fromSingleUri(context, Uri.parse(value))?.delete() }
         }
@@ -158,6 +173,18 @@ class TransferStorage(private val context: Context) {
     private fun saveRecord(id: UUID, value: JSONObject) { prefs.edit().putString("transfer_$id", value.toString()).apply() }
     private fun removeRecord(id: UUID) { prefs.edit().remove("transfer_$id").apply() }
     private fun touch(id: UUID) { record(id)?.also { it.put("updatedAt", System.currentTimeMillis()); saveRecord(id, it) } }
+
+    private fun closeWriter(id: UUID) {
+        writers.remove(id)?.let { writer ->
+            runCatching { writer.channel.force(false) }
+            runCatching { writer.stream.close() }
+            touch(id)
+        }
+    }
+
+    override fun close() {
+        writers.keys.toList().forEach(::closeWriter)
+    }
 
     private fun pruneOldRecords() {
         val cutoff = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000

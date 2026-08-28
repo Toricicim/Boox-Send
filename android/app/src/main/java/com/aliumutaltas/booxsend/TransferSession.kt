@@ -14,16 +14,20 @@ class TransferSession(context: Context, input: InputStream, output: OutputStream
     private val reservations = mutableMapOf<UUID, Reservation>()
 
     fun run() {
-        authenticate()
-        while (true) {
-            val frame = frames.read()
-            when (frame.type) {
-                FrameType.FILE_OFFER -> offer(frame.payload)
-                FrameType.FILE_CHUNK -> chunk(frame.payload)
-                FrameType.FILE_COMMIT -> commit(frame.payload)
-                FrameType.FINISH -> return
-                else -> error("Unexpected ${frame.type}")
+        try {
+            authenticate()
+            while (true) {
+                val frame = frames.read()
+                when (frame.type) {
+                    FrameType.FILE_OFFER -> offer(frame.payload)
+                    FrameType.FILE_CHUNK -> chunk(frame.payload)
+                    FrameType.FILE_COMMIT -> commit(frame.payload)
+                    FrameType.FINISH -> return
+                    else -> error("Unexpected ${frame.type}")
+                }
             }
+        } finally {
+            storage.close()
         }
     }
 

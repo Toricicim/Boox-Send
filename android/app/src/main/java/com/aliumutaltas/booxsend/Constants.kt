@@ -11,4 +11,5 @@ object Constants {
     const val KEY_COMPANION_ADDRESS = "companion_address"
     const val CHANNEL_ID = "boox_send_transfer"
     const val NOTIFICATION_ID = 1001
+    const val EXTRA_FOREGROUND = "foreground"
 }

@@ -18,6 +18,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import java.util.regex.Pattern
 
 class MainActivity : Activity() {
@@ -75,7 +76,16 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         restoreSystemCompanionAssociation()
+        startTransferListener()
         if (::status.isInitialized) refreshStatus()
+    }
+
+    private fun startTransferListener() {
+        ContextCompat.startForegroundService(
+            this,
+            Intent(this, TransferForegroundService::class.java)
+                .putExtra(Constants.EXTRA_FOREGROUND, true),
+        )
     }
 
     private fun requestBluetoothPermissions() {

@@ -18,8 +18,8 @@ validated in an emulator.
    minutes.
 2. Right-click a 1 KiB text file on the Mac and choose **Hızlı İşlemler >
    BOOX’a Gönder**.
-3. Confirm that a low-priority transfer notification appears and the file is
-   delivered without opening the BOOX app.
+3. Confirm that the file is delivered without opening the BOOX app. Automatic
+   boot mode can run without a persistent foreground notification.
 4. Repeat after one hour of BOOX sleep.
 5. If the companion callback is suppressed, enable BOOX's **Stay active in the
    background** setting and repeat. Do not add polling or a periodic worker.
@@ -38,5 +38,6 @@ validated in an emulator.
 ## Idle power check
 
 With the Mac absent, use Android developer tools or BOOX battery statistics to
-confirm that BOOX Send has no running foreground service, scheduled job,
-alarm, or Bluetooth scan. Bluetooth being enabled has its own baseline cost.
+confirm that BOOX Send has no scheduled job, alarm, periodic wake-up, or
+Bluetooth scan. A regular background service and blocking RFCOMM socket are
+expected after reboot. Bluetooth being enabled has its own baseline cost.

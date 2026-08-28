@@ -4,17 +4,19 @@ package com.aliumutaltas.booxsend
 
 import android.companion.CompanionDeviceService
 import android.content.Intent
-import android.os.Build
 
 class CompanionPresenceService : CompanionDeviceService() {
     @Suppress("DEPRECATION")
     override fun onDeviceAppeared(address: String) {
-        val intent = Intent(this, TransferForegroundService::class.java)
-        if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent) else startService(intent)
+        // Companion apps are allowed to run while their associated device is
+        // nearby. Starting as a regular service avoids BOOX firmware rejecting
+        // a background foreground-service promotion immediately after boot.
+        startService(Intent(this, TransferForegroundService::class.java))
     }
 
     @Suppress("DEPRECATION")
     override fun onDeviceDisappeared(address: String) {
-        stopService(Intent(this, TransferForegroundService::class.java))
+        // Keep the RFCOMM record available for the Mac's next connection.
+        // The listener blocks in accept() and performs no active scan or poll.
     }
 }

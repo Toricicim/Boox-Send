@@ -18,11 +18,12 @@ Bluetooth, without a cloud service, internet connection, or cable.
 - A Finder Quick Action for one or more selected files.
 - Bluetooth RFCOMM transfer directly between paired devices; no server or
   account.
-- Event-driven wake-up through Android Companion Device presence callbacks.
+- Automatic receiver startup after BOOX reboot, with Companion Device presence
+  as an additional wake-up path.
 - Resume support for interrupted queue jobs and SHA-256 verification.
 - Collision-safe names such as `book (1).pdf` instead of overwriting files.
-- The BOOX receiver stops after 15 idle seconds and uses no periodic scan,
-  alarm, or refresh loop.
+- A blocking RFCOMM listener with no periodic scan, alarm, timer, or refresh
+  loop.
 
 BOOX Send is not a folder synchronization tool. It sends only files explicitly
 selected by the user and never mirrors deletions.
@@ -34,9 +35,9 @@ Finder Quick Action
         ↓
 Local queue on the Mac
         ↓  Bluetooth Classic / SDP + RFCOMM
-Android Companion Device presence event
+BOOX boot or Android Companion Device event
         ↓
-Short-lived connectedDevice service
+Blocking RFCOMM listener
         ↓
 BOOX Books folder + SHA-256 verification
 ```
@@ -47,23 +48,25 @@ BR/EDR for the byte stream—there is no BLE/GATT transport, internet service, o
 cloud relay. See Android’s
 [`BluetoothServerSocket` documentation](https://developer.android.com/reference/android/bluetooth/BluetoothServerSocket).
 
-On the BOOX, an Android Companion Device presence event starts a short-lived
-`connectedDevice` foreground service. It accepts the RFCOMM session, verifies
-the file with SHA-256, and stops after 15 seconds without another connection.
-Companion association does not itself create a connection or enable continuous
-application scanning; see the official
+On the BOOX, a boot receiver starts an RFCOMM server and Android Companion
+Device presence provides an additional wake-up path. The server blocks in
+`accept()` until the Mac connects; it does not scan or periodically wake the
+application. A manual app launch promotes the listener to a low-priority
+`connectedDevice` foreground service as a fallback. Companion association does
+not itself create a connection or enable continuous application scanning; see
+the official
 [Companion Device documentation](https://developer.android.com/develop/connectivity/bluetooth/companion-device-pairing).
 
 ## Battery behavior
 
 BOOX Send schedules no periodic Bluetooth scan, WorkManager task, job, alarm,
-timer, or refresh loop and keeps no permanent foreground service or socket.
-Hardware checks confirmed that no BOOX Send service remained running while
-idle. This minimizes the app’s idle overhead, but it does not make Bluetooth
-free: keeping the system radio enabled still has a firmware-dependent baseline
-cost. No controlled multi-day battery percentage claim is currently made. The
-design follows Android’s advice to wake for device presence instead of
-periodically waking the app to scan; see the
+timer, or refresh loop. For reliable delivery after reboot, it keeps a regular
+background service and a blocking RFCOMM server socket while Bluetooth is
+enabled. A blocked `accept()` does not poll or consume CPU continuously, but the
+resident process and open socket can have a small idle overhead; this is not a
+zero-battery-cost design. Keeping the system Bluetooth radio enabled also has a
+firmware-dependent baseline cost. No controlled multi-day battery percentage
+claim is currently made. See Android’s
 [background Bluetooth guide](https://developer.android.com/develop/connectivity/bluetooth/ble/background).
 
 ## Distribution without paid certificates
