@@ -4,19 +4,31 @@ package com.aliumutaltas.booxsend
 
 import android.companion.CompanionDeviceService
 import android.content.Intent
+import android.util.Log
 
 class CompanionPresenceService : CompanionDeviceService() {
+    override fun onCreate() {
+        super.onCreate()
+        Log.i("BooxSend", "Companion presence service created")
+    }
+
     @Suppress("DEPRECATION")
     override fun onDeviceAppeared(address: String) {
-        // Companion apps are allowed to run while their associated device is
-        // nearby. Starting as a regular service avoids BOOX firmware rejecting
-        // a background foreground-service promotion immediately after boot.
-        startService(Intent(this, TransferForegroundService::class.java))
+        Log.i("BooxSend", "Companion device appeared: $address")
+        try {
+            startService(Intent(this, TransferReceiverService::class.java))
+        } catch (error: Exception) {
+            Log.e("BooxSend", "Could not start temporary transfer receiver", error)
+        }
     }
 
     @Suppress("DEPRECATION")
     override fun onDeviceDisappeared(address: String) {
-        // Keep the RFCOMM record available for the Mac's next connection.
-        // The listener blocks in accept() and performs no active scan or poll.
+        Log.i("BooxSend", "Companion device disappeared: $address")
+    }
+
+    override fun onDestroy() {
+        Log.i("BooxSend", "Companion presence service destroyed")
+        super.onDestroy()
     }
 }

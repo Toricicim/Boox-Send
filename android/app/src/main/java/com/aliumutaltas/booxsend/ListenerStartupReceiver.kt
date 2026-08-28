@@ -2,6 +2,7 @@ package com.aliumutaltas.booxsend
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
+import android.companion.CompanionDeviceManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -18,15 +19,24 @@ class ListenerStartupReceiver : BroadcastReceiver() {
         }
 
         if (shouldStart) {
-            try {
-                context.startService(Intent(context, TransferForegroundService::class.java))
-            } catch (error: IllegalStateException) {
-                // Companion presence remains the primary background-start path.
-                Log.w("BooxSend", "Boot listener start deferred to companion presence", error)
-            }
+            restorePresenceObservation(context)
         }
     }
 
     private fun bluetoothIsEnabled(context: Context): Boolean =
         context.getSystemService(BluetoothManager::class.java).adapter?.isEnabled == true
+
+    @Suppress("DEPRECATION")
+    private fun restorePresenceObservation(context: Context) {
+        val prefs = context.getSharedPreferences(Constants.PREFS, Context.MODE_PRIVATE)
+        val manager = context.getSystemService(CompanionDeviceManager::class.java)
+        val address = prefs.getString(Constants.KEY_COMPANION_ADDRESS, null)
+            ?: manager.associations.firstOrNull()
+            ?: return
+        try {
+            manager.startObservingDevicePresence(address)
+        } catch (error: Exception) {
+            Log.w("BooxSend", "Could not restore companion presence observation", error)
+        }
+    }
 }

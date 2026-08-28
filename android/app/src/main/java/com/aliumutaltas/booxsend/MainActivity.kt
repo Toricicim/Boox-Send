@@ -18,7 +18,6 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import java.util.regex.Pattern
 
 class MainActivity : Activity() {
@@ -76,21 +75,11 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         restoreSystemCompanionAssociation()
-        startTransferListener()
         if (::status.isInitialized) refreshStatus()
-    }
-
-    private fun startTransferListener() {
-        ContextCompat.startForegroundService(
-            this,
-            Intent(this, TransferForegroundService::class.java)
-                .putExtra(Constants.EXTRA_FOREGROUND, true),
-        )
     }
 
     private fun requestBluetoothPermissions() {
         val permissions = mutableListOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
-        if (android.os.Build.VERSION.SDK_INT >= 33) permissions += Manifest.permission.POST_NOTIFICATIONS
         val missing = permissions.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
         if (missing.isNotEmpty()) requestPermissions(missing.toTypedArray(), REQUEST_PERMISSIONS)
     }

@@ -18,12 +18,12 @@ cihazının `Books` klasörüne gönderin.
 - Finder’da tek veya birden fazla dosya için sağ tık menüsü ekler.
 - Dosyaları yalnızca eşleştirilmiş Mac ile BOOX arasında Bluetooth RFCOMM
   üzerinden taşır; sunucu veya hesap gerekmez.
-- BOOX yeniden başladıktan sonra alıcıyı otomatik açar; Android Companion Device
-  olayı da ek uyandırma yolu olarak kullanılır.
+- BOOX yeniden başladıktan sonra Android Companion Device olayıyla alıcıyı
+  otomatik uyandırır; uygulamayı tekrar açmak gerekmez.
 - Aktarım kesilirse aynı kuyruk işi kaldığı yerden devam edebilir.
 - Dosya boyutunu ve SHA-256 özetini doğrular.
 - Aynı adlı dosyaları ezmek yerine `dosya (1).pdf` biçiminde adlandırır.
-- RFCOMM bağlantısını bloklayarak bekler; sürekli tarama, zamanlayıcı veya
+- Geçici RFCOMM bağlantısını bloklayarak bekler; sürekli tarama, zamanlayıcı veya
   periyodik yenileme yapmaz.
 
 Bu bir klasör eşitleme uygulaması değildir. Mac’ten silinen dosyaları BOOX’tan
@@ -36,9 +36,9 @@ Finder Hızlı İşlemi
         ↓
 Mac'teki yerel dosya kuyruğu
         ↓  Bluetooth Classic / SDP + RFCOMM
-BOOX açılışı veya Android Companion Device olayı
-        ↓
-Bloklayan RFCOMM dinleyicisi
+BOOX açılışı Companion gözlemini geri yükler
+        ↓  Mac bağlantısı varlık olayını tetikler
+Geçici RFCOMM alıcısı (iki dakikalık boşta bekleme)
         ↓
 BOOX Books klasörü + SHA-256 doğrulaması
 ```
@@ -56,29 +56,31 @@ BOOX Books klasörü + SHA-256 doğrulaması
    uygulama taraması başlatmaz; yalnızca işletim sisteminin uygulamayı olay
    geldiğinde uyandırabilmesini sağlar. Ayrıntı:
    [Android Companion Device](https://developer.android.com/develop/connectivity/bluetooth/companion-device-pairing).
-4. BOOX açıldığında RFCOMM dinleyicisi otomatik başlar. Companion Device olayı
-   da ek uyandırma yolu sağlar. Dinleyici `accept()` içinde bloklanır; tarama ya
-   da periyodik uyanma yapmaz. Uygulama elle açılırsa yedek olarak düşük
-   öncelikli bir `connectedDevice` foreground service'e yükseltilir.
+4. BOOX açıldığında Companion Device varlık gözlemi yeniden kaydedilir. Mac
+   yakında göründüğünde Android, uygulamanın `CompanionDeviceService` servisini
+   sisteme bağlar. Bu callback geçici RFCOMM alıcısını başlatır; Mac’in sonraki
+   SDP denemesi alıcıyı bulur. Alıcı `accept()` içinde polling yapmadan bekler;
+   aktarım bitince hemen, dosya gelmezse iki dakika sonra kapanır.
 5. Dosya boyutu ve SHA-256 özeti doğrulandıktan sonra aktarım tamamlanır ve
-   dinleyici bir sonraki bağlantıyı bekler.
+   geçici alıcı kapanır.
 
 ## Pil kullanımı
 
 - Uygulama seviyesinde periyodik Bluetooth taraması yoktur.
 - `WorkManager`, zamanlanmış job, alarm, timer veya yenileme döngüsü yoktur.
-- Reset sonrasında güvenilir teslimat için Bluetooth açıkken normal bir arka
-  plan servisi ve bloklayan RFCOMM sunucu soketi açık kalır.
-- Bloklayan `accept()` çağrısı polling yapmaz ve CPU'yu sürekli çalıştırmaz;
-  yine de bellekte kalan süreç ve açık soketin küçük bir boşta tüketimi olabilir.
-- Uygulama elle açıldığında yedek foreground modu kullanılır. Resmî arka plan
-  önerileri:
+- Kalıcı bir foreground veya background service gerekmez. Gönderim girişimi
+  yokken uygulamanın çalışan alıcı servisi ya da açık RFCOMM soketi bulunmaz.
+- Mac bağlantısı geçici alıcıyı uyandırır. Alıcı dosya için en fazla iki dakika
+  bekler; aktif aktarım sürdüğü müddetçe açık kalır ve bitince hemen kapanır.
+  Bloklayan `accept()` çağrısı polling yapmaz.
+- Resmî arka plan önerileri:
   [Android Bluetooth background guide](https://developer.android.com/develop/connectivity/bluetooth/ble/background).
 
 Bu tasarım polling yapan bir uygulamadan daha sakindir ancak “sıfır pil
-tüketimi” anlamına gelmez. BOOX’ta Bluetooth’un açık tutulmasının firmware ve
-radyo kaynaklı taban tüketimi de vardır. Henüz kontrollü, çok günlük bir pil
-benchmark’ı yayımlanmadığı için kesin yüzde tasarruf iddiasında bulunmuyoruz.
+tüketimi” anlamına gelmez. BOOX’ta Bluetooth’un ve Companion varlık gözleminin
+açık tutulmasının firmware ve radyo kaynaklı taban tüketimi vardır. Henüz
+kontrollü, çok günlük bir pil benchmark’ı yayımlanmadığı için kesin yüzde
+tasarruf iddiasında bulunmuyoruz.
 
 ## Destek durumu
 

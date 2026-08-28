@@ -39,5 +39,7 @@ validated in an emulator.
 
 With the Mac absent, use Android developer tools or BOOX battery statistics to
 confirm that BOOX Send has no scheduled job, alarm, periodic wake-up, or
-Bluetooth scan. A regular background service and blocking RFCOMM socket are
-expected after reboot. Bluetooth being enabled has its own baseline cost.
+Bluetooth scan, running receiver service, or open RFCOMM socket. During a send
+attempt, a temporary receiver is expected to stop immediately after success or
+after a two-minute idle window. Bluetooth being enabled has its own baseline
+cost.
