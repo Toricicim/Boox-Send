@@ -18,8 +18,8 @@ jobs:
       - name: Validate plist and Swift sources
         run: |
           plutil -lint macos/BooxSend/Info.plist
-          plutil -lint "macos/QuickAction/BOOX’a Gönder.workflow/Contents/Info.plist"
-          plutil -lint "macos/QuickAction/BOOX’a Gönder.workflow/Contents/document.wflow"
+          plutil -lint "macos/QuickAction/Send to BOOX.workflow/Contents/Info.plist"
+          plutil -lint "macos/QuickAction/Send to BOOX.workflow/Contents/document.wflow"
           xcrun swiftc -typecheck -framework SwiftUI -framework AppKit -framework IOBluetooth -framework UserNotifications macos/Shared/*.swift macos/BooxSend/*.swift
       - name: Build native macOS app
         run: ./scripts/build-macos.sh
