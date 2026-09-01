@@ -46,8 +46,9 @@ adb install -r BOOX-Send-android.apk
 
 ### 4. Send a file
 
-1. The BOOX may be awake or asleep, but not shut down. Turn on Bluetooth on the
-   BOOX immediately before sending; the app does not enable Bluetooth itself.
+1. Wake the BOOX and turn on Bluetooth immediately before sending. On the
+   tested Go 10.3 firmware, sleep can turn Bluetooth off; the app cannot wake
+   the device or enable Bluetooth itself.
 2. Select one or more regular files in Finder.
 3. Right-click and choose **Quick Actions → Send to BOOX**.
 4. The Quick Action opens the Mac app automatically. Normally you do not need
@@ -85,8 +86,8 @@ xcode-select --install
 - Confirm that the devices are paired in both Bluetooth settings.
 - Confirm that the same eight-character code is saved on both apps.
 - Disable BOOX Freeze for BOOX Send and enable App Startup.
-- The BOOX must be powered on; normal sleep is fine. Turn on BOOX Bluetooth
-  before invoking the Finder action.
+- The BOOX must be awake with Bluetooth enabled. If it has slept, wake it and
+  check Bluetooth again before invoking the Finder action.
 - Some BOOX firmware may require Location Services during the initial companion
   association. BOOX Send itself does not request location data.
 

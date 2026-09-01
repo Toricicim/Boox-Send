@@ -112,8 +112,9 @@ for source installation or Bluetooth transfers.
 - Hardware-tested on a **BOOX Go 10.3 with Android 12-based firmware**.
 - Requires **macOS 14 or later** on Apple Silicon or Intel.
 - Other Android 12+ BOOX devices may work but are currently unverified.
-- A BOOX can be asleep, but it must be powered on. Enable its Bluetooth before
-  starting a Finder action.
+- The BOOX must be awake with Bluetooth enabled before starting a Finder
+  action. On the tested Go 10.3 firmware, sleep can turn Bluetooth off, so an
+  incoming transfer cannot wake the device from that state.
 
 ## Installation and first-time setup
 
@@ -161,8 +162,8 @@ for source installation or Bluetooth transfers.
 
 ### 4. Enable and use the Finder action
 
-1. Before each transfer, make sure the BOOX is powered on or asleep—not shut
-   down—and turn on Bluetooth on the BOOX.
+1. Before each transfer, wake the BOOX and confirm that Bluetooth is enabled.
+   If the device has slept, its firmware may have turned Bluetooth off.
 2. In Finder, select one or more regular files.
 3. Right-click and choose **Quick Actions → Send to BOOX**. If it is absent,
    choose **Customize…** or return to **System Settings → General → Login Items

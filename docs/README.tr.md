@@ -88,8 +88,9 @@ tasarruf iddiasında bulunmuyoruz.
 - Mac gereksinimi: **macOS 14 veya yenisi**, Bluetooth ve Apple Silicon ya da
   Intel işlemci.
 - Diğer Android 12+ BOOX modellerinde çalışabilir ancak henüz doğrulanmamıştır.
-- BOOX tamamen kapalıysa Bluetooth ile açılamaz. Cihaz açık veya uyku halinde,
-  Bluetooth etkin olmalıdır.
+- Gönderimden önce BOOX uyanık ve Bluetooth etkin olmalıdır. Test edilen Go
+  10.3 firmware’i uyku sırasında Bluetooth’u kapatabildiği için uygulama bu
+  durumda cihazı uzaktan uyandıramaz.
 
 ## Ücretli imza olmadan dağıtım
 

@@ -10,17 +10,18 @@ validated in an emulator.
 2. Complete BOOX Send setup and companion association.
 3. Disable Freeze for BOOX Send and enable App Startup.
 4. Leave **Stay active in the background** off for the first test.
-5. Disable BOOX auto-shutdown; normal sleep is allowed.
+5. Keep the BOOX awake and confirm that Bluetooth remains enabled.
 
 ## Presence and wake tests
 
-1. Force-stop neither app. Swipe BOOX Send away and let the BOOX sleep for ten
-   minutes.
+1. Force-stop neither app. Swipe BOOX Send away, keep the BOOX awake with
+   Bluetooth enabled, and wait ten minutes.
 2. Right-click a 1 KiB text file on the Mac and choose **Quick Actions > Send
    to BOOX**.
 3. Confirm that the file is delivered without opening the BOOX app. Automatic
    boot mode can run without a persistent foreground notification.
-4. Repeat after one hour of BOOX sleep.
+4. Let the BOOX sleep, wake it manually, re-enable Bluetooth if the firmware
+   turned it off, and repeat the transfer.
 5. If the companion callback is suppressed, enable BOOX's **Stay active in the
    background** setting and repeat. Do not add polling or a periodic worker.
 
