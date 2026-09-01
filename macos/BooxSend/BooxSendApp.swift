@@ -15,6 +15,7 @@ struct BooxSendApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
+    private var settingsWindow: NSWindow?
     private var idleQuitWorkItem: DispatchWorkItem?
     private let logger = Logger(subsystem: "com.aliumutaltas.BooxSend", category: "lifecycle")
 
@@ -51,6 +52,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)
         )
         TransferCoordinator.shared.processQueue()
+
+        let defaults = UserDefaults(suiteName: BooxConstants.appGroup)
+        let deviceAddress = defaults?.string(forKey: "deviceAddress")
+        let setupCode = defaults?.string(forKey: "setupCode")
+        if deviceAddress.isNilOrEmpty || setupCode.isNilOrEmpty {
+            DispatchQueue.main.async { [weak self] in self?.openSettings() }
+        }
     }
 
     @objc private func queueChanged() {
@@ -67,6 +75,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func handleURL(_ event: NSAppleEventDescriptor, withReplyEvent reply: NSAppleEventDescriptor) {
+        if let value = event.paramDescriptor(forKeyword: keyDirectObject)?.stringValue,
+           URL(string: value)?.host == "settings" {
+            openSettings()
+            return
+        }
 #if BOOX_LOCAL_SMOKE_TEST
         if let value = event.paramDescriptor(forKeyword: keyDirectObject)?.stringValue,
            URL(string: value)?.host == "smoketest" {
@@ -93,7 +106,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         cancelAutomaticQuit()
         TransferCoordinator.shared.processQueue()
     }
-    @objc private func openSettings() { NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil) }
+    @objc private func openSettings() {
+        logger.notice("Opening settings window")
+        if settingsWindow == nil {
+            let controller = NSHostingController(rootView: SettingsView())
+            let window = NSWindow(contentViewController: controller)
+            window.title = "BOOX Send Settings"
+            window.styleMask = [.titled, .closable, .miniaturizable]
+            window.isReleasedWhenClosed = false
+            window.center()
+            settingsWindow = window
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        settingsWindow?.makeKeyAndOrderFront(nil)
+    }
     @objc private func quit() { NSApp.terminate(nil) }
 
     private func rebuildMenu() {
@@ -136,6 +162,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         item.target = self
         return item
     }
+}
+
+private extension Optional where Wrapped == String {
+    var isNilOrEmpty: Bool { self?.isEmpty != false }
 }
 
 struct SettingsView: View {

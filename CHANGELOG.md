@@ -3,6 +3,13 @@
 All notable changes are documented here. This project follows Semantic
 Versioning where practical.
 
+## 1.0.4 - 2026-09-01
+
+- Fix the Mac menu bar **Settings…** action on current macOS versions.
+- Show the settings window automatically on first launch when the BOOX device
+  or setup code has not been configured.
+- Clarify that the BOOX must be awake with Bluetooth enabled before sending.
+
 ## 1.0.3 - 2026-09-01
 
 - Translate the Mac app, BOOX app, Finder Quick Action, notifications, and
