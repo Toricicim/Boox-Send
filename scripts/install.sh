@@ -9,6 +9,6 @@ if command -v adb >/dev/null 2>&1 && adb devices | awk 'NR > 1 && $2 == "device"
     "$project_root/scripts/install-boox.sh"
 else
     echo
-    echo "Mac tarafı hazır. BOOX'u USB hata ayıklama ile bağladıktan sonra:"
+    echo "The Mac side is ready. After connecting the BOOX with USB debugging enabled, run:"
     echo "  ./scripts/install-boox.sh"
 fi

@@ -107,6 +107,12 @@ final class RFCOMMConnector: NSObject {
     private func finish(_ result: Result<RFCOMMConnection, Error>) {
         timeoutWorkItem?.cancel()
         timeoutWorkItem = nil
+        if case .failure = result, device.isConnected() {
+            // A failed SDP attempt can leave the Classic Bluetooth baseband
+            // connected. Closing it makes the next retry produce a fresh
+            // ACL_CONNECTED event, which wakes BOOX's temporary receiver.
+            device.closeConnection()
+        }
         let callback = completion
         completion = nil
         callback?(result)

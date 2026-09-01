@@ -15,7 +15,7 @@ cleanup() {
 trap cleanup EXIT HUP INT TERM
 
 command -v xcrun >/dev/null 2>&1 || {
-    echo "Hata: Xcode Command Line Tools gerekli. 'xcode-select --install' çalıştırın." >&2
+    echo "Error: Xcode Command Line Tools are required. Run 'xcode-select --install'." >&2
     exit 1
 }
 
@@ -33,7 +33,7 @@ helper_slices=""
 for architecture in $architectures; do
     case "$architecture" in
         arm64|x86_64) ;;
-        *) echo "Hata: desteklenmeyen mimari: $architecture" >&2; exit 1 ;;
+        *) echo "Error: unsupported architecture: $architecture" >&2; exit 1 ;;
     esac
 
     app_slice="$temporary_root/BooxSend-$architecture"
@@ -90,4 +90,4 @@ if [ -e "$destination" ]; then
 fi
 ditto "$stage_app" "$destination"
 
-echo "Mac uygulaması hazır: $destination"
+echo "Mac app ready: $destination"

@@ -1,6 +1,6 @@
 # BOOX Send
 
-Mac’inizde bir dosyaya sağ tıklayıp **Hızlı İşlemler → BOOX’a Gönder** diyerek
+Mac’inizde bir dosyaya sağ tıklayıp **Hızlı İşlemler → Send to BOOX** diyerek
 dosyayı internet, bulut veya kablo kullanmadan Bluetooth üzerinden BOOX Go 10.3
 cihazının `Books` klasörüne gönderin.
 
@@ -157,17 +157,17 @@ bakın.
 ## İlk kurulum
 
 1. Mac ve BOOX’u sistem Bluetooth ayarlarından normal şekilde eşleştirin.
-2. Mac’in menü çubuğundaki **BOOX** simgesinden Ayarlar’ı açın, eşleştirilmiş
-   BOOX’u seçin ve sekiz karakterli bir kod üretin.
+2. Mac’in menü çubuğundaki **BOOX** simgesinden **Settings…** ekranını açın,
+   eşleştirilmiş BOOX’u seçin ve **Generate** ile sekiz karakterli kod üretin.
 3. BOOX’ta BOOX Send’i açın, aynı kodu kaydedin.
-4. **Hedef Klasörü Seç** ile `Books` klasörünü seçin.
-5. **Mac’i Companion Cihaz Olarak Eşleştir** düğmesine basıp Mac’i seçin.
+4. **Choose Destination Folder** ile `Books` klasörünü seçin.
+5. **Associate Mac as Companion Device** düğmesine basıp Mac’i seçin.
 6. BOOX uygulama ayarlarında Freeze’i kapatıp App Startup’ı açın. Uygulamanın
    sürekli çalışan bir tarayıcısı yoktur.
 
-Artık Finder’da dosyaya sağ tıklayıp **Hızlı İşlemler → BOOX’a Gönder**
+Artık Finder’da dosyaya sağ tıklayıp **Hızlı İşlemler → Send to BOOX**
 seçeneğini kullanabilirsiniz. BOOX ulaşılamıyorsa dosya Mac kuyruğunda kalır;
-menü çubuğundan **Tekrar Dene** seçilebilir.
+menü çubuğundan **Retry** seçilebilir.
 
 ## Geliştirme
 

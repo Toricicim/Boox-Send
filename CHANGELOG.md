@@ -3,6 +3,21 @@
 All notable changes are documented here. This project follows Semantic
 Versioning where practical.
 
+## 1.0.3 - 2026-09-01
+
+- Translate the Mac app, BOOX app, Finder Quick Action, notifications, and
+  installers to English.
+- Rename the Finder Quick Action to **Send to BOOX** and migrate the previous
+  Turkish workflow during installation.
+- Automatically quit the Mac menu bar app 60 seconds after transfer processing
+  becomes idle, while preserving failed queue jobs for the next launch.
+- Wake the temporary BOOX receiver from the paired Mac's protected Bluetooth
+  connection event, with Companion presence as a second event-driven path.
+- Make opening the BOOX setup app start the same two-minute receiver window as
+  a manual fallback, and reset failed Mac Bluetooth links between retries.
+- Expand the installation, Quick Action enablement, lifecycle, and battery
+  documentation.
+
 ## 1.0.2 - 2026-08-28
 
 - Restore Companion Device presence observation after a BOOX reboot without

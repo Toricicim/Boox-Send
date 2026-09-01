@@ -7,6 +7,6 @@ do {
     DistributedNotificationCenter.default().post(name: BooxConstants.queueNotification, object: nil)
     print(job.id.uuidString)
 } catch {
-    FileHandle.standardError.write(Data("BOOX’a gönderilemedi: \(error.localizedDescription)\n".utf8))
+    FileHandle.standardError.write(Data("Could not send to BOOX: \(error.localizedDescription)\n".utf8))
     exit(EXIT_FAILURE)
 }

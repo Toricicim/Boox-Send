@@ -2,6 +2,7 @@ package com.aliumutaltas.booxsend
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothDevice
 import android.companion.CompanionDeviceManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -15,11 +16,33 @@ class ListenerStartupReceiver : BroadcastReceiver() {
             Intent.ACTION_MY_PACKAGE_REPLACED -> bluetoothIsEnabled(context)
             BluetoothAdapter.ACTION_STATE_CHANGED ->
                 intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR) == BluetoothAdapter.STATE_ON
+            BluetoothDevice.ACTION_ACL_CONNECTED -> {
+                startReceiverForAssociatedMac(context, intent)
+                false
+            }
             else -> false
         }
 
         if (shouldStart) {
             restorePresenceObservation(context)
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun startReceiverForAssociatedMac(context: Context, intent: Intent) {
+        val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE) ?: return
+        val prefs = context.getSharedPreferences(Constants.PREFS, Context.MODE_PRIVATE)
+        val manager = context.getSystemService(CompanionDeviceManager::class.java)
+        val associatedAddress = prefs.getString(Constants.KEY_COMPANION_ADDRESS, null)
+            ?: manager.associations.firstOrNull()
+            ?: return
+        if (!device.address.equals(associatedAddress, ignoreCase = true)) return
+
+        Log.i("BooxSend", "Associated Mac connected; opening temporary receiver window")
+        try {
+            context.startService(Intent(context, TransferReceiverService::class.java))
+        } catch (error: Exception) {
+            Log.e("BooxSend", "Could not start temporary transfer receiver after Bluetooth connection", error)
         }
     }
 

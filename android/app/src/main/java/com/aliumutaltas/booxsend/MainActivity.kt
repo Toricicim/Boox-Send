@@ -33,23 +33,23 @@ class MainActivity : Activity() {
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(padding, padding, padding, padding)
-            addView(TextView(context).apply { text = "BOOX Send İlk Kurulum"; textSize = 24f })
+            addView(TextView(context).apply { text = "BOOX Send Setup"; textSize = 24f })
         }
         code = EditText(this).apply {
-            hint = "Mac'teki 8 karakterli kurulum kodu"
+            hint = "8-character setup code from the Mac"
             setText(prefs.getString(Constants.KEY_SETUP_CODE, ""))
             isSingleLine = true
         }
         layout.addView(code, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         layout.addView(Button(this).apply {
-            text = "Kodu Kaydet"
+            text = "Save Code"
             setOnClickListener {
                 prefs.edit().putString(Constants.KEY_SETUP_CODE, code.text.toString().trim().uppercase()).apply()
-                updateStatus("Kurulum kodu kaydedildi.")
+                updateStatus("Setup code saved.")
             }
         })
         layout.addView(Button(this).apply {
-            text = "Hedef Klasörü Seç"
+            text = "Choose Destination Folder"
             setOnClickListener {
                 startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
@@ -57,11 +57,11 @@ class MainActivity : Activity() {
             }
         })
         layout.addView(Button(this).apply {
-            text = "Mac'i Companion Cihaz Olarak Eşleştir"
+            text = "Associate Mac as Companion Device"
             setOnClickListener { associateMac() }
         })
         layout.addView(Button(this).apply {
-            text = "Uygulama Ayarlarını Aç"
+            text = "Open App Settings"
             setOnClickListener {
                 startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
             }
@@ -75,7 +75,19 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         restoreSystemCompanionAssociation()
+        startTemporaryReceiverIfConfigured()
         if (::status.isInitialized) refreshStatus()
+    }
+
+    private fun startTemporaryReceiverIfConfigured() {
+        val setupComplete = !prefs.getString(Constants.KEY_SETUP_CODE, "").isNullOrBlank() &&
+            !prefs.getString(Constants.KEY_TREE_URI, "").isNullOrBlank()
+        if (!setupComplete || checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) return
+        try {
+            startService(Intent(this, TransferReceiverService::class.java))
+        } catch (_: Exception) {
+            // The Bluetooth system event remains the normal wake-up path.
+        }
     }
 
     private fun requestBluetoothPermissions() {
@@ -86,7 +98,7 @@ class MainActivity : Activity() {
 
     private fun associateMac() {
         if (code.text.toString().trim().length != 8) {
-            updateStatus("Önce 8 karakterli kurulum kodunu kaydedin.")
+            updateStatus("Save an 8-character setup code first.")
             return
         }
         val deviceFilter = BluetoothDeviceFilter.Builder().setNamePattern(Pattern.compile(".*")).build()
@@ -99,10 +111,10 @@ class MainActivity : Activity() {
             }
 
             override fun onFailure(error: CharSequence?) {
-                runOnUiThread { updateStatus("Mac bulunamadı: ${error ?: "bilinmeyen hata"}") }
+                runOnUiThread { updateStatus("Mac not found: ${error ?: "unknown error"}") }
             }
         }, null)
-        updateStatus("Yakındaki Classic Bluetooth cihazları aranıyor; eşleştirilmiş Mac'inizi seçin…")
+        updateStatus("Searching for nearby Classic Bluetooth devices; select your paired Mac…")
     }
 
     /**
@@ -143,9 +155,9 @@ class MainActivity : Activity() {
                     prefs.edit().putString(Constants.KEY_COMPANION_ADDRESS, device.address).apply()
                     try {
                         getSystemService(CompanionDeviceManager::class.java).startObservingDevicePresence(device.address)
-                        updateStatus("Mac companion cihaz olarak eşleştirildi.")
+                        updateStatus("Mac associated as a companion device.")
                     } catch (error: Exception) {
-                        updateStatus("Varlık izleme başlatılamadı: ${error.message}")
+                        updateStatus("Could not start presence observation: ${error.message}")
                     }
                 }
             }
@@ -156,7 +168,7 @@ class MainActivity : Activity() {
         val folder = prefs.getString(Constants.KEY_TREE_URI, null) != null
         val companion = prefs.getString(Constants.KEY_COMPANION_ADDRESS, null) != null
         val savedCode = !prefs.getString(Constants.KEY_SETUP_CODE, "").isNullOrBlank()
-        updateStatus("Kod: ${if (savedCode) "hazır" else "eksik"}\nHedef klasör: ${if (folder) "hazır" else "eksik"}\nMac companion: ${if (companion) "hazır" else "eksik"}")
+        updateStatus("Code: ${if (savedCode) "ready" else "missing"}\nDestination folder: ${if (folder) "ready" else "missing"}\nMac companion: ${if (companion) "ready" else "missing"}")
     }
 
     private fun updateStatus(message: String) { status.text = message }

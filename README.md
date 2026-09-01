@@ -1,7 +1,7 @@
 # BOOX Send
 
-Right-click one or more files on a Mac and choose **Quick Actions → BOOX’a
-Gönder** to transfer them to the `Books` folder of a BOOX Go 10.3 over
+Right-click one or more files on a Mac and choose **Quick Actions → Send to
+BOOX** to transfer them to the `Books` folder of a BOOX Go 10.3 over
 Bluetooth, without a cloud service, internet connection, or cable.
 
 > This project grew out of a real need: sending an occasional file from a Mac
@@ -24,6 +24,8 @@ Bluetooth, without a cloud service, internet connection, or cable.
 - Collision-safe names such as `book (1).pdf` instead of overwriting files.
 - A temporary blocking RFCOMM listener with no periodic scan, alarm, or refresh
   loop.
+- The Mac app opens for a Quick Action and quits automatically after 60 idle
+  seconds.
 
 BOOX Send is not a folder synchronization tool. It sends only files explicitly
 selected by the user and never mirrors deletions.
@@ -49,9 +51,9 @@ cloud relay. See Android’s
 [`BluetoothServerSocket` documentation](https://developer.android.com/reference/android/bluetooth/BluetoothServerSocket).
 
 On the BOOX, a boot receiver restores Android Companion Device presence
-observation. When the paired Mac appears, Android binds the app's
-`CompanionDeviceService`. That callback starts a temporary RFCOMM receiver;
-the Mac's next SDP retry finds it and completes the transfer. The receiver
+observation. When the paired Mac appears, Android's Companion callback or its
+protected Bluetooth connection event starts a temporary RFCOMM receiver; the
+Mac's next SDP retry finds it and completes the transfer. The receiver
 blocks in `accept()` without polling and stops as soon as a transfer completes,
 or after two minutes if no transfer arrives. Companion association does not
 itself create a connection or enable continuous application scanning; see the
@@ -70,6 +72,25 @@ Bluetooth radio and Companion presence observation enabled still has a
 firmware-dependent baseline cost, so this is not a zero-battery-cost design. No
 controlled multi-day battery percentage claim is currently made. See Android’s
 [background Bluetooth guide](https://developer.android.com/develop/connectivity/bluetooth/ble/background).
+
+## When the apps run
+
+Neither side is designed to remain open continuously:
+
+- **Mac:** the Finder Quick Action adds the selected files to the local queue
+  and opens BOOX Send automatically. The app transfers the queue, then quits
+  after 60 seconds with no active processing. A failed job remains on disk, but
+  the app still quits; the next Quick Action launch retries the queue. The
+  automatic quit is postponed while the Settings window is visible.
+- **BOOX:** the setup screen does not open during a normal transfer. Android
+  uses the paired Mac's Companion or protected Bluetooth connection event to
+  start the temporary RFCOMM receiver. Opening BOOX Send manually starts the
+  same temporary receiver as a fallback. It stops immediately after success.
+  If no transfer arrives, it closes after a two-minute idle window. No permanent
+  foreground or background receiver service remains running.
+- **Before sending:** turn on Bluetooth on the BOOX. BOOX Send does not enable
+  Bluetooth itself. You may leave BOOX Bluetooth off between transfers if you
+  prefer, then enable it immediately before using the Finder action.
 
 ## Distribution without paid certificates
 
@@ -91,20 +112,64 @@ for source installation or Bluetooth transfers.
 - Hardware-tested on a **BOOX Go 10.3 with Android 12-based firmware**.
 - Requires **macOS 14 or later** on Apple Silicon or Intel.
 - Other Android 12+ BOOX devices may work but are currently unverified.
-- A BOOX can be asleep, but it must be powered on with Bluetooth enabled.
+- A BOOX can be asleep, but it must be powered on. Enable its Bluetooth before
+  starting a Finder action.
 
-## Quick installation
+## Installation and first-time setup
 
-### From a GitHub Release
+### 1. Pair the devices
 
-1. Download the universal macOS ZIP and Android APK from **Releases**.
-2. Extract the ZIP and double-click `Install.command`. For an ad-hoc build,
-   macOS may require **System Settings → Privacy & Security → Open Anyway**.
-3. Copy the APK to the BOOX and open it, or install it over USB debugging:
+1. Turn on Bluetooth on both devices.
+2. Pair the Mac and BOOX in their normal system Bluetooth settings.
+
+### 2. Install the Mac side
+
+1. Download `BOOX-Send-<version>-macOS-universal.zip` from **Releases** and
+   extract it.
+2. Right-click `Install.command` and choose **Open**. If macOS blocks it, open
+   **System Settings → Privacy & Security** and choose **Open Anyway** only if
+   you trust this project.
+3. The installer places `BOOX Send.app` in `/Applications` and `Send to
+   BOOX.workflow` in `~/Library/Services`.
+4. Enable the action in **System Settings → General → Login Items & Extensions
+   → Finder**. Open the Finder extension details if shown, then enable **Send to
+   BOOX**. This step is required; installing the workflow alone does not always
+   make it available in Finder.
+5. Open **BOOX Send** once from Applications. Click the **BOOX** menu bar item,
+   choose **Settings…**, select the paired BOOX, and click **Generate** to make
+   an eight-character setup code.
+
+### 3. Install the BOOX side
+
+1. Download `BOOX-Send-android.apk` from the same release.
+2. Copy it to the BOOX, open it in the BOOX file manager, and approve
+   installation from that source if Android asks. Alternatively, install it
+   over USB debugging:
 
    ```sh
    adb install -r BOOX-Send-android.apk
    ```
+
+3. Open BOOX Send once. Enter the same eight-character code from the Mac and
+   tap **Save Code**.
+4. Tap **Choose Destination Folder**, select `Books`, and approve **Use this
+   folder**.
+5. Tap **Associate Mac as Companion Device** and select the already-paired Mac.
+6. Open BOOX app settings, disable **Freeze** for BOOX Send, and enable **App
+   Startup**. These settings let Android deliver the brief boot/presence event;
+   they do not keep BOOX Send permanently active.
+
+### 4. Enable and use the Finder action
+
+1. Before each transfer, make sure the BOOX is powered on or asleep—not shut
+   down—and turn on Bluetooth on the BOOX.
+2. In Finder, select one or more regular files.
+3. Right-click and choose **Quick Actions → Send to BOOX**. If it is absent,
+   choose **Customize…** or return to **System Settings → General → Login Items
+   & Extensions → Finder** and enable it.
+4. The Mac app opens automatically. You do not need to open the BOOX app.
+5. After the queue finishes, the Mac app quits after 60 idle seconds. The BOOX
+   receiver closes immediately after the transfer.
 
 ### One-command source installation
 
@@ -131,19 +196,6 @@ install each side separately:
 
 Building the Android side also requires JDK 17+, Android SDK 35, and `adb`. See
 the complete [installation and troubleshooting guide](docs/INSTALL.en.md).
-
-## First-time setup
-
-1. Pair the Mac and BOOX in their normal system Bluetooth settings.
-2. Open BOOX Send settings from the Mac menu bar, select the paired BOOX, and
-   generate an eight-character setup code.
-3. Open BOOX Send on the BOOX and save the same code.
-4. Select the `Books` destination folder.
-5. Associate the Mac as the companion device.
-6. Disable BOOX Freeze for the app and enable App Startup.
-
-Use **Quick Actions → BOOX’a Gönder** in Finder. Unavailable transfers remain in
-the Mac queue and can be retried from the menu bar.
 
 ## Development
 

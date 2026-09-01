@@ -16,8 +16,8 @@ validated in an emulator.
 
 1. Force-stop neither app. Swipe BOOX Send away and let the BOOX sleep for ten
    minutes.
-2. Right-click a 1 KiB text file on the Mac and choose **Hızlı İşlemler >
-   BOOX’a Gönder**.
+2. Right-click a 1 KiB text file on the Mac and choose **Quick Actions > Send
+   to BOOX**.
 3. Confirm that the file is delivered without opening the BOOX app. Automatic
    boot mode can run without a persistent foreground notification.
 4. Repeat after one hour of BOOX sleep.
@@ -29,7 +29,7 @@ validated in an emulator.
 - Send empty, 1 KiB, 1 MiB, and 20 MiB files.
 - Send multiple files with the same basename and verify `(1)`, `(2)` naming.
 - Disable Bluetooth halfway through a 20 MiB transfer, enable it again, then use
-  **Yeniden Dene** on the Mac. Verify that the partial transfer resumes.
+  **Retry** on the Mac. Verify that the partial transfer resumes.
 - Disconnect immediately after BOOX commits the file but before Mac receives
   the result; retry and verify no duplicate is created.
 - Fill BOOX storage and verify the Mac retains the failed queue item.

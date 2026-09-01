@@ -11,6 +11,7 @@ final class TransferCoordinator {
     private let queue = DispatchQueue(label: "booxsend.transfer", qos: .userInitiated)
     private var isRunning = false
     private var retainedConnector: RFCOMMConnector?
+    var onIdle: (() -> Void)?
 
     func processQueue() {
         queue.async { [weak self] in self?.startIfNeeded() }
@@ -30,6 +31,7 @@ final class TransferCoordinator {
         }
         guard let job = jobs.first(where: { $0.state != .completed }) else {
             logger.notice("No pending transfer job")
+            notifyCoordinatorIdle()
             return
         }
         logger.notice("Starting queued transfer with \(job.files.count, privacy: .public) file(s)")
@@ -61,7 +63,7 @@ final class TransferCoordinator {
                         try self.send(job: job, setupCode: setupCode, connection: connection)
                         connection.close()
                         try SharedQueue.shared.remove(job)
-                        self.notify(title: "BOOX gönderimi tamamlandı", body: "\(job.files.count) dosya gönderildi.")
+                        self.notify(title: "Sent to BOOX", body: "\(job.files.count) file(s) transferred.")
                         self.logger.notice("Queued transfer completed")
                         self.isRunning = false
                         // Give both Bluetooth stacks time to retire the previous
@@ -139,8 +141,16 @@ final class TransferCoordinator {
         failed.state = .failed
         failed.error = error.localizedDescription
         try? SharedQueue.shared.update(failed)
-        notify(title: "BOOX gönderilemedi", body: "\(error.localizedDescription) Kuyrukta tutuldu.")
+        notify(title: "Could not send to BOOX", body: "\(error.localizedDescription) The job remains queued.")
         isRunning = false
+        notifyCoordinatorIdle()
+    }
+
+    private func notifyCoordinatorIdle() {
+        let handler = onIdle
+        DispatchQueue.main.async {
+            handler?()
+        }
     }
 
     private func notify(title: String, body: String) {

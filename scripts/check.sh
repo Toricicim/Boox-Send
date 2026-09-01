@@ -8,8 +8,8 @@ plutil -lint \
   "$project_root/macos/BooxSend/BooxSend.entitlements" \
   "$project_root/macos/BooxSendFinder/Info.plist" \
   "$project_root/macos/BooxSendFinder/BooxSendFinder.entitlements" \
-  "$project_root/macos/QuickAction/BOOX’a Gönder.workflow/Contents/Info.plist" \
-  "$project_root/macos/QuickAction/BOOX’a Gönder.workflow/Contents/document.wflow"
+  "$project_root/macos/QuickAction/Send to BOOX.workflow/Contents/Info.plist" \
+  "$project_root/macos/QuickAction/Send to BOOX.workflow/Contents/document.wflow"
 xmllint --noout \
   "$project_root/android/app/src/main/AndroidManifest.xml" \
   "$project_root/android/app/src/main/res/values/styles.xml"

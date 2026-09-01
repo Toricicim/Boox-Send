@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleIdentifier</key><string>com.aliumutaltas.BooxSend.QuickAction</string>
-  <key>CFBundleName</key><string>BOOX’a Gönder</string>
+  <key>CFBundleName</key><string>Send to BOOX</string>
   <key>CFBundleShortVersionString</key><string>1.0</string>
   <key>NSServices</key>
   <array>
     <dict>
       <key>NSIconName</key><string>NSActionTemplate</string>
-      <key>NSMenuItem</key><dict><key>default</key><string>BOOX’a Gönder</string></dict>
+      <key>NSMenuItem</key><dict><key>default</key><string>Send to BOOX</string></dict>
       <key>NSMessage</key><string>runWorkflowAsService</string>
       <key>NSSendFileTypes</key><array><string>public.data</string></array>
     </dict>

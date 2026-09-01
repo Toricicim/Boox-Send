@@ -50,7 +50,7 @@ dilimlerini birleştirerek evrensel uygulama oluşturur.
 1. Normal bir dosyaya sağ tıkladığınızdan emin olun; klasör seçmek desteklenmez.
 2. **Hızlı İşlemler** alt menüsünü kontrol edin.
 3. **Sistem Ayarları → Genel → Giriş Öğeleri ve Genişletmeler → Finder** altında
-   `BOOX’a Gönder` seçeneğini açın.
+   `Send to BOOX` seçeneğini açın.
 4. Aşağıdaki komutla servisi yeniden kaydedin:
 
    ```sh
@@ -75,7 +75,7 @@ dilimlerini birleştirerek evrensel uygulama oluşturur.
 ## Kuyruk ve tekrar deneme
 
 Başarısız işler `~/Library/Application Support/BOOX Send/Queue` altında tutulur.
-Mac menü çubuğundaki **BOOX → Tekrar Dene** ile yeniden gönderilir. `--purge`
+Mac menü çubuğundaki **BOOX → Retry** ile yeniden gönderilir. `--purge`
 seçenekli kaldırma dışında kurulum güncellemesi bu kuyruğu korur.
 
 ## Log toplama
