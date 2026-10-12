@@ -26,6 +26,7 @@ Bluetooth, without a cloud service, internet connection, or cable.
   loop.
 - The Mac app opens for a Quick Action and quits automatically after 60 idle
   seconds.
+- In-app update downloads and installation with confirmation, preserving setup.
 
 BOOX Send is not a folder synchronization tool. It sends only files explicitly
 selected by the user and never mirrors deletions.
@@ -217,9 +218,43 @@ Docker is deliberately not the primary build path: macOS signing, Finder
 services, IOBluetooth, and physical USB/ADB access cannot be supplied by a Linux
 container. CI provides repeatable source checks instead.
 
+## Updating without setting up again
+
+Starting with **1.0.6**, use **BOOX menu → Check for Updates…** on the Mac or
+**Check for Updates** on the BOOX setup screen. The app also checks at most once
+per day when it is already open. An update check never launches either app;
+there are no update alarms, scheduled jobs, or permanent update services.
+BOOX Bluetooth/boot receiver events do not run update checks.
+
+Choose to download and install when an update is offered. Updates need internet
+access to GitHub; file transfers still work entirely offline over Bluetooth.
+Android may ask you to allow installation from BOOX Send, then asks you to
+approve the update. Mac installation restarts the app and requires a writable
+app folder. Complete pending transfers before installing. The Mac updater keeps
+the previous app in a `.boox-send-update.*` recovery folder beside the app.
+
+**Do not uninstall first.** In-place updates preserve the setup code, selected
+companion device, Bluetooth pairing, BOOX folder access, existing books, Mac
+queue and Finder Quick Action. No new computer association is required. The
+updater verifies release checksums; Android also requires the same signing key.
+A source/debug Android build cannot automatically switch to the public release
+key. Update such builds using the same key, without uninstalling. Sandboxed
+Xcode builds may require a manual Mac installation; the release ZIP and local
+installer produce the supported Mac updater build.
+
+Users on **1.0.5 or earlier** need one normal in-place upgrade to 1.0.6 to get
+the updater. Install the APK over the old app and run the Mac installer over
+the existing installation; keep all app data. Future updates are available
+inside the apps. Future protocol incompatibilities may require updating both
+sides, but the updater does not regenerate the setup code.
+
 ## Privacy and security
 
-There is no cloud component, account, telemetry, or analytics. The setup code
+There is no cloud file-transfer component, account, telemetry, or analytics.
+While open, the apps can contact GitHub's public release API to check for updates
+and download an update you approve. GitHub receives normal HTTPS request data
+such as your IP address; books, setup codes and Bluetooth addresses are not sent.
+The setup code
 authenticates the application protocol with HMAC-SHA256. File contents are not
 additionally encrypted at the application layer and rely on the paired
 Bluetooth link. See [SECURITY.md](SECURITY.md).

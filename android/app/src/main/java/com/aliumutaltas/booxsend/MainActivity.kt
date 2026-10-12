@@ -25,6 +25,7 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var code: EditText
     private var pendingCompanionAddress: String? = null
+    private lateinit var updater: AppUpdater
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,6 +71,13 @@ class MainActivity : Activity() {
         })
         status = TextView(this).apply { setPadding(0, padding, 0, 0) }
         layout.addView(status)
+        val updateStatus = TextView(this)
+        updater = AppUpdater(this) { updateStatus.text = it }
+        layout.addView(Button(this).apply {
+            text = "Check for Updates"
+            setOnClickListener { updater.check(manual = true) }
+        })
+        layout.addView(updateStatus)
         setContentView(layout)
         refreshStatus()
     }
@@ -79,6 +87,10 @@ class MainActivity : Activity() {
         restoreSystemCompanionAssociation()
         startTemporaryReceiverIfConfigured()
         if (::status.isInitialized) refreshStatus()
+        if (::updater.isInitialized) {
+            updater.resumePendingInstall()
+            updater.check(manual = false)
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

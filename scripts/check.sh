@@ -13,7 +13,7 @@ plutil -lint \
 xmllint --noout \
   "$project_root/android/app/src/main/AndroidManifest.xml" \
   "$project_root/android/app/src/main/res/values/styles.xml"
-for script in "$project_root"/scripts/*.sh "$project_root"/packaging/*.command; do
+for script in "$project_root"/scripts/*.sh "$project_root"/packaging/*.command "$project_root"/macos/Helpers/*.sh; do
   sh -n "$script"
 done
 swiftc -frontend -parse \
@@ -25,6 +25,7 @@ swiftc -frontend -parse \
   "$project_root"/macos/Shared/Constants.swift \
   "$project_root"/macos/Shared/SharedQueue.swift \
   "$project_root"/macos/BooxSendQueue/main.swift
+sh "$project_root/scripts/test-macos-updater.sh"
 
 if command -v shellcheck >/dev/null 2>&1; then
   shellcheck "$project_root"/scripts/*.sh "$project_root"/packaging/*.command

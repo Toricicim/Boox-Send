@@ -9,7 +9,13 @@ final class TransferCoordinator {
 
     private let logger = Logger(subsystem: "com.aliumutaltas.BooxSend", category: "transfer")
     private let queue = DispatchQueue(label: "booxsend.transfer", qos: .userInitiated)
-    private var isRunning = false
+    private let stateLock = NSLock()
+    private var running = false
+    private var isRunning: Bool {
+        get { stateLock.lock(); defer { stateLock.unlock() }; return running }
+        set { stateLock.lock(); defer { stateLock.unlock() }; running = newValue }
+    }
+    var isProcessing: Bool { isRunning }
     private var retainedConnector: RFCOMMConnector?
     var onIdle: (() -> Void)?
 

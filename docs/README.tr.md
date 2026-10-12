@@ -82,6 +82,22 @@ açık tutulmasının firmware ve radyo kaynaklı taban tüketimi vardır. Henü
 kontrollü, çok günlük bir pil benchmark’ı yayımlanmadığı için kesin yüzde
 tasarruf iddiasında bulunmuyoruz.
 
+## Güncelleme ve ayarların korunması
+
+1.0.6 sürümünden itibaren Mac menüsünde veya BOOX uygulamasında **Check for
+Updates** ile güncelleme indirip onaylayabilirsiniz. Otomatik kontrol yalnızca
+uygulama zaten açıkken, günde en fazla bir kez yapılır. Güncelleme kontrolü için
+uygulamayı açan alarm, görev veya servis yoktur; BOOX açılış/Bluetooth olayları
+güncelleme kontrolü yapmaz. Güncelleme internet gerektirir, dosya aktarımı ise
+çevrimdışı Bluetooth üzerinden çalışmaya devam eder.
+
+Uygulamayı önceden silmeyin. Mevcut uygulamanın üzerine aynı imzayla güncelleme,
+kurulum kodunu, Mac eşleştirmesini, klasör erişimini ve kitapları korur. Mac
+kuyruğu ve Finder Hızlı İşlemi de yerinde kalır. Android kurulum izni ve
+güncelleme onayı isteyebilir. Kaynak/debug kurulumu, farklı imzalı yayın APK’sına
+otomatik geçirilemez; aynı anahtarla güncellenmelidir. 1.0.5 ve önceki sürümler
+bu özelliği almak için bir kez normal, verileri koruyan güncelleme gerektirir.
+
 ## Destek durumu
 
 - Donanım üzerinde doğrulandı: **BOOX Go 10.3 / Android 12 tabanlı firmware**.

@@ -19,7 +19,7 @@ command -v xcrun >/dev/null 2>&1 || {
     exit 1
 }
 
-mkdir -p "$stage_app/Contents/MacOS" "$stage_app/Contents/Helpers"
+mkdir -p "$stage_app/Contents/MacOS" "$stage_app/Contents/Helpers" "$stage_app/Contents/Resources"
 cp "$project_root/macos/BooxSend/Info.plist" "$stage_app/Contents/Info.plist"
 plutil -replace CFBundleExecutable -string BooxSend "$stage_app/Contents/Info.plist"
 plutil -replace CFBundleIdentifier -string com.aliumutaltas.BooxSend "$stage_app/Contents/Info.plist"
@@ -49,6 +49,7 @@ for architecture in $architectures; do
         "$project_root/macos/BooxSend/ConfigurationStore.swift" \
         "$project_root/macos/BooxSend/RFCOMMConnection.swift" \
         "$project_root/macos/BooxSend/TransferCoordinator.swift" \
+        "$project_root/macos/BooxSend/AppUpdater.swift" \
         "$project_root/macos/BooxSend/BooxSendApp.swift" \
         -o "$app_slice"
 
@@ -70,6 +71,7 @@ set -- $helper_slices
 if [ "$#" -eq 1 ]; then cp "$1" "$stage_app/Contents/Helpers/BooxSendQueue"; else lipo -create "$@" -output "$stage_app/Contents/Helpers/BooxSendQueue"; fi
 
 chmod 755 "$stage_app/Contents/MacOS/BooxSend" "$stage_app/Contents/Helpers/BooxSendQueue"
+cp "$project_root/macos/Helpers/InstallUpdate.sh" "$stage_app/Contents/Resources/InstallUpdate.sh"
 
 sign_identity=${MACOS_SIGN_IDENTITY:--}
 if [ "$sign_identity" = "-" ]; then

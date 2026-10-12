@@ -23,6 +23,8 @@ jobs:
           xcrun swiftc -typecheck -framework SwiftUI -framework AppKit -framework IOBluetooth -framework UserNotifications macos/Shared/*.swift macos/BooxSend/*.swift
       - name: Build native macOS app
         run: ./scripts/build-macos.sh
+      - name: Test updater version handling
+        run: sh scripts/test-macos-updater.sh
       - name: Verify signature
         run: codesign --verify --deep --strict "build/release/BOOX Send.app"
       - uses: actions/upload-artifact@v7

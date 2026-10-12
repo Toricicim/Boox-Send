@@ -14,6 +14,8 @@ targets:
     sources:
       - path: BooxSend
       - path: Shared
+      - path: Helpers/InstallUpdate.sh
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.aliumutaltas.BooxSend

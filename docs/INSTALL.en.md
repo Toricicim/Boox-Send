@@ -69,6 +69,34 @@ xcode-select --install
 ./scripts/install-boox.sh
 ```
 
+## Updating and preserving setup
+
+On 1.0.6+, use **BOOX menu → Check for Updates…** on Mac or **Check for Updates**
+in the BOOX app. Both apps check only while already open, at most once per day
+automatically; the manual button can check immediately. Neither app wakes up
+for update checks. Downloads use internet; Bluetooth sending stays offline.
+
+Approve the download and installation. On BOOX, enable **Allow from this source**
+for BOOX Send if prompted, return to the app and approve Android's update dialog.
+If you cancelled installation, tap **Check for Updates** again to retry.
+
+Do not uninstall, clear app data, unpair devices or generate a new setup code.
+The same app ID and signing key preserve the companion association, code,
+destination folder permission and books. Mac updates keep preferences, queue
+and the existing Quick Action; wait for active attempts to finish before updating.
+Failed jobs are preserved and retried by the new Mac app.
+
+Older apps need one manual in-place upgrade to 1.0.6 first. A source/debug BOOX
+installation must keep its original signing key; if the updater reports a key
+mismatch, keep the installation and rebuild/update with that key. Uninstalling
+would remove setup and is not required for normal release-to-release updates.
+
+The Mac app folder must be writable. If it is administrator-owned, use the
+normal installer with an administrator account. A previous Mac app is retained
+in `.boox-send-update.*` beside the app for recovery. The app checks downloads
+before replacing the installed app and restores the previous app if replacement
+or launch fails.
+
 ## Finder action is missing
 
 - Right-click a regular file; folders are not accepted.

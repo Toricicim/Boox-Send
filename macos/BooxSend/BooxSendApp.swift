@@ -13,6 +13,7 @@ struct BooxSendApp: App {
     }
 }
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var settingsWindow: NSWindow?
@@ -41,6 +42,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.title = "BOOX"
         rebuildMenu()
+        AppUpdater.shared.onChange = { [weak self] in self?.rebuildMenu() }
+        AppUpdater.shared.check(manual: false)
         DistributedNotificationCenter.default().addObserver(
             self, selector: #selector(queueChanged), name: BooxConstants.queueNotification, object: nil
         )
@@ -121,6 +124,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindow?.makeKeyAndOrderFront(nil)
     }
     @objc private func quit() { NSApp.terminate(nil) }
+    @objc private func checkForUpdates() { AppUpdater.shared.check(manual: true) }
 
     private func rebuildMenu() {
         let pending = (try? SharedQueue.shared.jobs().filter { $0.state != .completed }.count) ?? 0
@@ -130,6 +134,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(count)
         menu.addItem(item("Retry", action: #selector(retry), key: "r"))
         menu.addItem(item("Settings…", action: #selector(openSettings), key: ","))
+        let updateTitle = AppUpdater.shared.availableVersion.map { "Update to \($0)…" } ?? "Check for Updates…"
+        let updateItem = item(AppUpdater.shared.isBusy ? "Checking / downloading update…" : updateTitle,
+                              action: #selector(checkForUpdates), key: "")
+        updateItem.isEnabled = !AppUpdater.shared.isBusy
+        menu.addItem(updateItem)
         menu.addItem(.separator())
         menu.addItem(item("Quit", action: #selector(quit), key: "q"))
         statusItem.menu = menu
@@ -145,7 +154,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         logger.notice("Automatic quit scheduled after 60 idle seconds")
         let workItem = DispatchWorkItem { [weak self] in
             guard let self else { return }
-            if NSApp.windows.contains(where: { $0.isVisible && $0.canBecomeKey }) {
+            if AppUpdater.shared.isBusy || NSApp.windows.contains(where: { $0.isVisible && $0.canBecomeKey }) {
                 self.logger.notice("Automatic quit postponed while a window is visible")
                 self.scheduleAutomaticQuit()
             } else {

@@ -3,6 +3,19 @@
 All notable changes are documented here. This project follows Semantic
 Versioning where practical.
 
+## 1.0.6 - 2026-10-12
+
+- Add in-app update checks, downloads and user-approved installation on Mac and
+  BOOX. Automatic checks run at most once per day while the app is already open;
+  no update scheduler, boot check or background wake-up is added.
+- Verify GitHub release SHA-256 checksums and reject downgrades; the BOOX updater
+  also verifies the APK package, version and signing certificate before installation.
+- Preserve setup codes, selected companion devices, folder grants, files and Mac
+  queue/Quick Action configuration by updating in place, without uninstalling.
+- Retain the previous Mac app for recovery and block installation when Mac queue
+  transfer attempts or a BOOX Bluetooth transfer are active. Failed queue jobs
+  survive updates so they can be retried with the new version.
+
 ## 1.0.5 - 2026-10-12
 
 - Select the Mac from already-paired Bluetooth devices before requesting

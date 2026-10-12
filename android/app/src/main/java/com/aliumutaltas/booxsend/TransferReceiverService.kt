@@ -19,8 +19,12 @@ class TransferReceiverService : Service() {
         super.onCreate()
         listener = RfcommListener(
             this,
-            onTransferStarted = { handler.removeCallbacks(stopAfterIdle) },
+            onTransferStarted = {
+                transferActive = true
+                handler.removeCallbacks(stopAfterIdle)
+            },
             onTransferFinished = { completed ->
+                transferActive = false
                 if (completed) {
                     Log.i("BooxSend", "Transfer completed; stopping temporary receiver")
                     stopSelf()
@@ -47,11 +51,14 @@ class TransferReceiverService : Service() {
     override fun onDestroy() {
         handler.removeCallbacks(stopAfterIdle)
         listener.destroy()
+        transferActive = false
         Log.i("BooxSend", "Temporary transfer receiver stopped")
         super.onDestroy()
     }
 
-    private companion object {
-        const val RECEIVER_WINDOW_MS = 120_000L
+    companion object {
+        @Volatile var transferActive = false
+            private set
+        private const val RECEIVER_WINDOW_MS = 120_000L
     }
 }
