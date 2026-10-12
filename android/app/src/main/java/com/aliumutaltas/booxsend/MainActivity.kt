@@ -72,11 +72,23 @@ class MainActivity : Activity() {
         status = TextView(this).apply { setPadding(0, padding, 0, 0) }
         layout.addView(status)
         val updateStatus = TextView(this)
-        updater = AppUpdater(this) { updateStatus.text = it }
-        layout.addView(Button(this).apply {
+        val checkUpdates = Button(this).apply {
             text = "Check for Updates"
-            setOnClickListener { updater.check(manual = true) }
-        })
+        }
+        val installUpdate = Button(this).apply {
+            text = "Install Downloaded Update"
+            visibility = android.view.View.GONE
+        }
+        updater = AppUpdater(this) { message, busy, ready ->
+            updateStatus.text = message
+            checkUpdates.isEnabled = !busy
+            installUpdate.isEnabled = !busy
+            installUpdate.visibility = if (ready) android.view.View.VISIBLE else android.view.View.GONE
+        }
+        checkUpdates.setOnClickListener { updater.check(manual = true) }
+        installUpdate.setOnClickListener { updater.installCached() }
+        layout.addView(checkUpdates)
+        layout.addView(installUpdate)
         layout.addView(updateStatus)
         setContentView(layout)
         refreshStatus()
@@ -88,9 +100,18 @@ class MainActivity : Activity() {
         startTemporaryReceiverIfConfigured()
         if (::status.isInitialized) refreshStatus()
         if (::updater.isInitialized) {
-            updater.resumePendingInstall()
-            updater.check(manual = false)
+            updater.resume()
         }
+    }
+
+    override fun onPause() {
+        if (::updater.isInitialized) updater.pause()
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        if (::updater.isInitialized) updater.pause()
+        super.onDestroy()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

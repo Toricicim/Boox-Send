@@ -26,6 +26,7 @@ swiftc -frontend -parse \
   "$project_root"/macos/Shared/SharedQueue.swift \
   "$project_root"/macos/BooxSendQueue/main.swift
 sh "$project_root/scripts/test-macos-updater.sh"
+sh "$project_root/scripts/test-macos-update-install.sh"
 
 if command -v shellcheck >/dev/null 2>&1; then
   shellcheck "$project_root"/scripts/*.sh "$project_root"/packaging/*.command

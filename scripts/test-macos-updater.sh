@@ -10,6 +10,7 @@ xcrun swiftc -swift-version 5 -D BOOX_LOCAL_ADHOC -parse-as-library \
     "$project_root/macos/BooxSend/RFCOMMConnection.swift" \
     "$project_root/macos/BooxSend/TransferCoordinator.swift" \
     "$project_root/macos/BooxSend/AppUpdater.swift" \
+    "$project_root/macos/BooxSend/UpdateReceipt.swift" \
     "$project_root/scripts/tests/UpdaterTests.swift" \
     -o "$test_root/UpdaterTests"
 "$test_root/UpdaterTests"

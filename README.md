@@ -210,6 +210,17 @@ make build-android  # debug APK
 make package        # universal Apple Silicon + Intel release ZIP
 ```
 
+Updater installer tests run as part of `make check`. To run isolated APK/cache
+tests on a connected debug-signed BOOX, use:
+
+```sh
+sh scripts/test-android-updater-device.sh
+```
+
+This updates the debug app in place and installs a test runner. Its newer APK
+fixture is test data only and is not installed or published. Do not run this
+debug-device script against a public-release-signed installation.
+
 The signed Finder extension target remains available in the XcodeGen project.
 The free local installer uses the more reliable Automator Quick Action so it
 does not depend on a paid Apple signing identity.
@@ -229,9 +240,21 @@ BOOX Bluetooth/boot receiver events do not run update checks.
 Choose to download and install when an update is offered. Updates need internet
 access to GitHub; file transfers still work entirely offline over Bluetooth.
 Android may ask you to allow installation from BOOX Send, then asks you to
-approve the update. Mac installation restarts the app and requires a writable
+approve the update. From 1.0.7, a verified APK can be installed later using
+**Install Downloaded Update**, without downloading again. The download survives
+setup-screen recreation and never opens installer UI while that screen is paused.
+Manual checks always refresh GitHub metadata; unsuccessful automatic checks may
+retry on a later opening after a short failure backoff, rather than waiting a day.
+Mac installation restarts the app and requires a writable
 app folder. Complete pending transfers before installing. The Mac updater keeps
 the previous app in a `.boox-send-update.*` recovery folder beside the app.
+From 1.0.7, the updater stages and verifies the replacement before quitting,
+requires the new app to acknowledge startup, and restores/reopens the old app
+when replacement or acknowledgement fails. Result logs live in
+`~/Library/Application Support/BOOX Send/Updates`. This checks startup, not every
+future feature or Bluetooth connection. Installing 1.0.7 from an older updater
+uses that older updater's installation behavior; the improvements apply to
+subsequent updates initiated by 1.0.7 or later.
 
 **Do not uninstall first.** In-place updates preserve the setup code, selected
 companion device, Bluetooth pairing, BOOX folder access, existing books, Mac

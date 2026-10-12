@@ -3,6 +3,10 @@ package com.aliumutaltas.booxsend
 import java.net.URI
 
 object UpdatePolicy {
+    fun shouldAutomaticallyCheck(now: Long, lastSuccess: Long, lastAttempt: Long): Boolean =
+        (lastSuccess == 0L || now - lastSuccess >= 86_400_000L) &&
+        (lastAttempt == 0L || now - lastAttempt >= 900_000L)
+
     fun version(value: String): List<Int>? {
         val match = Regex("^v?(\\d+)\\.(\\d+)\\.(\\d+)$").matchEntire(value) ?: return null
         return match.groupValues.drop(1).map { it.toIntOrNull() ?: return null }

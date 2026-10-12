@@ -25,6 +25,8 @@ jobs:
         run: ./scripts/build-macos.sh
       - name: Test updater version handling
         run: sh scripts/test-macos-updater.sh
+      - name: Test update installation and rollback
+        run: sh scripts/test-macos-update-install.sh
       - name: Verify signature
         run: codesign --verify --deep --strict "build/release/BOOX Send.app"
       - uses: actions/upload-artifact@v7

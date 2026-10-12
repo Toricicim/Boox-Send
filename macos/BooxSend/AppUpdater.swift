@@ -8,7 +8,6 @@ final class AppUpdater: ObservableObject {
     @Published private(set) var availableVersion: String?
     private(set) var isBusy = false
     var onChange: (() -> Void)?
-    private var available: Release?
     private let defaults = UserDefaults.standard
 
     struct Release: Decodable {
@@ -38,17 +37,18 @@ final class AppUpdater: ObservableObject {
 
     func check(manual: Bool) {
         guard !isBusy else { return }
-        if manual, let release = available { offer(release); return }
-        if !manual, Date().timeIntervalSince1970 - defaults.double(forKey: "lastUpdateCheck") < 86400 { return }
-        defaults.set(Date().timeIntervalSince1970, forKey: "lastUpdateCheck")
+        let now = Date().timeIntervalSince1970
+        if !manual, now - defaults.double(forKey: "lastUpdateSuccess") < 86400 || now - defaults.double(forKey: "lastUpdateAttempt") < 900 { return }
+        defaults.set(now, forKey: "lastUpdateAttempt")
         isBusy = true
         onChange?()
         Task {
             defer { isBusy = false; onChange?() }
             do {
-                var request = URLRequest(url: URL(string: "https://api.github.com/repos/Toricicim/Boox-Send/releases/latest")!)
+                var request = URLRequest(url: URL(string: "https://api.github.com/repos/Toricicim/Boox-Send/releases/latest")!, cachePolicy: .reloadIgnoringLocalCacheData)
                 request.timeoutInterval = 15
                 request.setValue("BOOX-Send-Updater", forHTTPHeaderField: "User-Agent")
+                request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
                 let (data, response) = try await URLSession.shared.data(for: request)
                 try Self.validateResponse(response)
                 let release = try JSONDecoder().decode(Release.self, from: data)
@@ -56,11 +56,15 @@ final class AppUpdater: ObservableObject {
                 let current = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0"
                 if Self.isNewer(release.tag_name, than: current) {
                     _ = try Self.asset(for: release)
-                    available = release
                     availableVersion = release.tag_name
                     if manual { DispatchQueue.main.async { self.offer(release) } }
-                } else if manual { message("You're up to date", "BOOX Send \(current) is installed.") }
+                } else {
+                    availableVersion = nil
+                    if manual { message("You're up to date", "BOOX Send \(current) is installed.") }
+                }
+                defaults.set(now, forKey: "lastUpdateSuccess")
             } catch {
+                availableVersion = nil
                 if manual { message("Could not check for updates", error.localizedDescription + " Bluetooth transfers still work offline.") }
             }
         }
@@ -101,6 +105,8 @@ final class AppUpdater: ObservableObject {
         Task {
             var staging: URL?
             var handedOff = false
+            var installer: Process?
+            var receiptDirectory: URL?
             defer {
                 if !handedOff, let staging { try? FileManager.default.removeItem(at: staging) }
                 isBusy = false
@@ -131,7 +137,7 @@ final class AppUpdater: ObservableObject {
                 let archive = root.appendingPathComponent("update.zip")
                 try FileManager.default.moveItem(at: download, to: archive)
                 try Self.run("/usr/bin/ditto", ["-x", "-k", archive.path, root.path])
-                let version = String(release.tag_name.dropFirst())
+                let version = release.tag_name.hasPrefix("v") ? String(release.tag_name.dropFirst()) : release.tag_name
                 let app = root.appendingPathComponent("BOOX-Send-\(version)-macOS/BOOX Send.app")
                 let plist = app.appendingPathComponent("Contents/Info.plist")
                 let info = try PropertyListSerialization.propertyList(from: Data(contentsOf: plist), format: nil) as? [String: Any]
@@ -142,17 +148,48 @@ final class AppUpdater: ObservableObject {
                 let stagedHelper = root.appendingPathComponent("InstallUpdate.sh")
                 try FileManager.default.copyItem(at: helper, to: stagedHelper)
                 let process = Process()
+                installer = process
+                let receipt = try UpdateReceipt.create()
+                receiptDirectory = receipt
+                defaults.set(receipt.lastPathComponent, forKey: "pendingUpdateID")
+                defaults.synchronize()
                 process.executableURL = URL(fileURLWithPath: "/bin/sh")
-                process.arguments = [stagedHelper.path, app.path, destination.path, String(ProcessInfo.processInfo.processIdentifier)]
-                let log = root.appendingPathComponent("install.log")
+                process.arguments = [stagedHelper.path, app.path, destination.path, String(ProcessInfo.processInfo.processIdentifier), receipt.path, version]
+                let log = receipt.appendingPathComponent("install.log")
                 FileManager.default.createFile(atPath: log.path, contents: nil)
                 let output = try FileHandle(forWritingTo: log)
                 process.standardOutput = output
                 process.standardError = output
                 try process.run()
+                // The installed app stays running until its replacement is fully staged.
+                var prepared = false
+                for _ in 0..<600 {
+                    let status = try? String(contentsOf: receipt.appendingPathComponent("status"), encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
+                    if status == "prepared" { prepared = true; break }
+                    if status == "failed" || !process.isRunning { break }
+                    try await Task.sleep(nanoseconds: 100_000_000)
+                }
+                if !prepared {
+                    let text = (try? String(contentsOf: receipt.appendingPathComponent("message"), encoding: .utf8))
+                        ?? "The installer could not prepare the update. Your current app has been kept."
+                    throw failure(text)
+                }
+                try ensureTransferIdle()
                 handedOff = true
                 NSApp.terminate(nil)
-            } catch { message("Could not install update", error.localizedDescription) }
+            } catch {
+                if let installer, installer.isRunning {
+                    installer.terminate()
+                    for _ in 0..<50 {
+                        if !installer.isRunning { break }
+                        try? await Task.sleep(nanoseconds: 100_000_000)
+                    }
+                }
+                if let receiptDirectory, defaults.string(forKey: "pendingUpdateID") == receiptDirectory.lastPathComponent {
+                    defaults.removeObject(forKey: "pendingUpdateID")
+                }
+                message("Could not install update", error.localizedDescription)
+            }
         }
     }
 

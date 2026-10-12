@@ -38,6 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        UpdateReceipt.startupAcknowledgement()
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusItem.button?.title = "BOOX"
@@ -62,6 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if deviceAddress.isNilOrEmpty || setupCode.isNilOrEmpty {
             DispatchQueue.main.async { [weak self] in self?.openSettings() }
         }
+        UpdateReceipt.reportPendingResult()
     }
 
     @objc private func queueChanged() {

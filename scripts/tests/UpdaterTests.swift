@@ -23,6 +23,8 @@ struct UpdaterTests {
         precondition(!assetAccepted(url.replacingOccurrences(of: "github.com", with: "github.com.evil.test"), digest: digest))
         precondition(!assetAccepted(url.replacingOccurrences(of: "Toricicim", with: "other"), digest: digest))
         precondition(!assetAccepted(url, digest: nil))
+        precondition(UpdateReceipt.directory(id: "../../Applications") == nil)
+        precondition(UpdateReceipt.directory(id: UUID().uuidString) != nil)
         print("Mac updater version and download validation checks passed.")
     }
 }

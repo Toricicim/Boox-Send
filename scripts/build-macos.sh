@@ -50,6 +50,7 @@ for architecture in $architectures; do
         "$project_root/macos/BooxSend/RFCOMMConnection.swift" \
         "$project_root/macos/BooxSend/TransferCoordinator.swift" \
         "$project_root/macos/BooxSend/AppUpdater.swift" \
+        "$project_root/macos/BooxSend/UpdateReceipt.swift" \
         "$project_root/macos/BooxSend/BooxSendApp.swift" \
         -o "$app_slice"
 

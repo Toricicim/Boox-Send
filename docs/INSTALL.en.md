@@ -79,6 +79,8 @@ for update checks. Downloads use internet; Bluetooth sending stays offline.
 Approve the download and installation. On BOOX, enable **Allow from this source**
 for BOOX Send if prompted, return to the app and approve Android's update dialog.
 If you cancelled installation, tap **Check for Updates** again to retry.
+From 1.0.7, you can use **Install Downloaded Update** to retry without a new
+download, even without internet. The cached file is rechecked before installation.
 
 Do not uninstall, clear app data, unpair devices or generate a new setup code.
 The same app ID and signing key preserve the companion association, code,
@@ -96,6 +98,11 @@ normal installer with an administrator account. A previous Mac app is retained
 in `.boox-send-update.*` beside the app for recovery. The app checks downloads
 before replacing the installed app and restores the previous app if replacement
 or launch fails.
+Updates started by 1.0.7+ first prepare the new app while the old app stays open,
+then wait for the new app's startup acknowledgement. A failed transaction restores
+and reopens the old app and reports the failure. Logs and results are in
+`~/Library/Application Support/BOOX Send/Updates`. The first upgrade from an
+older updater still uses that older updater's installation behavior.
 
 ## Finder action is missing
 

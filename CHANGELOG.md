@@ -3,6 +3,20 @@
 All notable changes are documented here. This project follows Semantic
 Versioning where practical.
 
+## 1.0.7 - 2026-10-12
+
+- Always fetch fresh release metadata for manual update checks. Failed automatic
+  checks can retry on a later app opening, without adding scheduled wake-ups.
+- Keep BOOX downloads in application-scoped state, detach paused setup screens,
+  prevent overlapping operations and replace cached APKs atomically.
+- Reuse verified downloaded APKs, including after setup-screen recreation; add
+  **Install Downloaded Update** and recover from damaged cached files.
+- Prepare Mac replacements before quitting, record persistent install results,
+  require a startup acknowledgement, and restore/reopen the previous app on failure.
+- Add real Mac installer success/crash/cancellation tests and isolated Go 10.3
+  updater tests covering native APK signatures, cache reuse, observer replacement,
+  invalid checksums, fresh metadata and FileProvider access.
+
 ## 1.0.6 - 2026-10-12
 
 - Add in-app update checks, downloads and user-approved installation on Mac and
