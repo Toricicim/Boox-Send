@@ -32,9 +32,7 @@ class ListenerStartupReceiver : BroadcastReceiver() {
     private fun startReceiverForAssociatedMac(context: Context, intent: Intent) {
         val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE) ?: return
         val prefs = context.getSharedPreferences(Constants.PREFS, Context.MODE_PRIVATE)
-        val manager = context.getSystemService(CompanionDeviceManager::class.java)
         val associatedAddress = prefs.getString(Constants.KEY_COMPANION_ADDRESS, null)
-            ?: manager.associations.firstOrNull()
             ?: return
         if (!device.address.equals(associatedAddress, ignoreCase = true)) return
 
@@ -54,7 +52,6 @@ class ListenerStartupReceiver : BroadcastReceiver() {
         val prefs = context.getSharedPreferences(Constants.PREFS, Context.MODE_PRIVATE)
         val manager = context.getSystemService(CompanionDeviceManager::class.java)
         val address = prefs.getString(Constants.KEY_COMPANION_ADDRESS, null)
-            ?: manager.associations.firstOrNull()
             ?: return
         try {
             manager.startObservingDevicePresence(address)

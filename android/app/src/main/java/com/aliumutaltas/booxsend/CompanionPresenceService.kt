@@ -14,6 +14,9 @@ class CompanionPresenceService : CompanionDeviceService() {
 
     @Suppress("DEPRECATION")
     override fun onDeviceAppeared(address: String) {
+        val selectedMac = getSharedPreferences(Constants.PREFS, MODE_PRIVATE)
+            .getString(Constants.KEY_COMPANION_ADDRESS, null) ?: return
+        if (!address.equals(selectedMac, ignoreCase = true)) return
         Log.i("BooxSend", "Companion device appeared: $address")
         try {
             startService(Intent(this, TransferReceiverService::class.java))
