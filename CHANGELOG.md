@@ -3,6 +3,15 @@
 All notable changes are documented here. This project follows Semantic
 Versioning where practical.
 
+## 1.0.5 - 2026-10-12
+
+- Select the Mac from already-paired Bluetooth devices before requesting
+  Companion access. Filter the system request by its exact Bluetooth address
+  so unpaired nearby devices cannot trigger unrelated permission prompts.
+- Reuse an existing association for the selected Mac and preserve the selection
+  across setup screen recreation.
+- Stop recovering an arbitrary first association left by the old broad scan.
+
 ## 1.0.4 - 2026-09-01
 
 - Fix the Mac menu bar **Settings…** action on current macOS versions.

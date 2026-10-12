@@ -2,8 +2,9 @@ package com.aliumutaltas.booxsend
 
 import android.Manifest
 import android.app.Activity
-import android.app.PendingIntent
+import android.app.AlertDialog
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
 import android.companion.AssociationRequest
 import android.companion.BluetoothDeviceFilter
 import android.companion.CompanionDeviceManager
@@ -18,15 +19,16 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
-import java.util.regex.Pattern
 
 class MainActivity : Activity() {
     private val prefs by lazy { getSharedPreferences(Constants.PREFS, MODE_PRIVATE) }
     private lateinit var status: TextView
     private lateinit var code: EditText
+    private var pendingCompanionAddress: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        pendingCompanionAddress = savedInstanceState?.getString("pendingCompanionAddress")
         requestBluetoothPermissions()
 
         val padding = (24 * resources.displayMetrics.density).toInt()
@@ -79,6 +81,11 @@ class MainActivity : Activity() {
         if (::status.isInitialized) refreshStatus()
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString("pendingCompanionAddress", pendingCompanionAddress)
+        super.onSaveInstanceState(outState)
+    }
+
     private fun startTemporaryReceiverIfConfigured() {
         val setupComplete = !prefs.getString(Constants.KEY_SETUP_CODE, "").isNullOrBlank() &&
             !prefs.getString(Constants.KEY_TREE_URI, "").isNullOrBlank()
@@ -97,24 +104,77 @@ class MainActivity : Activity() {
     }
 
     private fun associateMac() {
-        if (code.text.toString().trim().length != 8) {
+        if (prefs.getString(Constants.KEY_SETUP_CODE, "").orEmpty().length != 8) {
             updateStatus("Save an 8-character setup code first.")
             return
         }
-        val deviceFilter = BluetoothDeviceFilter.Builder().setNamePattern(Pattern.compile(".*")).build()
-        val request = AssociationRequest.Builder().addDeviceFilter(deviceFilter).setSingleDevice(true).build()
-        val manager = getSystemService(CompanionDeviceManager::class.java)
-        manager.associate(request, object : CompanionDeviceManager.Callback() {
-            @Deprecated("Android 12 callback")
-            override fun onDeviceFound(chooserLauncher: IntentSender) {
-                startIntentSenderForResult(chooserLauncher, REQUEST_ASSOCIATION, null, 0, 0, 0)
+        if (checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            requestBluetoothPermissions()
+            updateStatus("Allow Nearby devices access, then tap Associate Mac again.")
+            return
+        }
+        val adapter = getSystemService(BluetoothManager::class.java).adapter
+        if (adapter == null || !adapter.isEnabled) {
+            updateStatus("Turn on Bluetooth on both devices, then tap Associate Mac again.")
+            return
+        }
+        val devices = adapter.bondedDevices.sortedWith(compareBy({ it.name.orEmpty() }, { it.address }))
+        if (devices.isEmpty()) {
+            updateStatus("No paired devices found. Pair your Mac in the BOOX Bluetooth settings first.")
+            startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Select your paired Mac")
+            .setItems(devices.map { "${it.name ?: "Unnamed device"}\n${it.address}" }.toTypedArray()) { _, index ->
+                associatePairedMac(devices[index])
             }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
 
-            override fun onFailure(error: CharSequence?) {
-                runOnUiThread { updateStatus("Mac not found: ${error ?: "unknown error"}") }
-            }
-        }, null)
-        updateStatus("Searching for nearby Classic Bluetooth devices; select your paired Mac…")
+    private fun associatePairedMac(device: BluetoothDevice) {
+        val manager = getSystemService(CompanionDeviceManager::class.java)
+        @Suppress("DEPRECATION")
+        if (manager.associations.any { it.equals(device.address, ignoreCase = true) }) {
+            saveCompanion(device.address)
+            return
+        }
+        pendingCompanionAddress = device.address
+        // An exact address also lets Android match an already-bonded device
+        // without requiring it to be discoverable. Never match nearby strangers.
+        val deviceFilter = BluetoothDeviceFilter.Builder().setAddress(device.address).build()
+        val request = AssociationRequest.Builder().addDeviceFilter(deviceFilter).setSingleDevice(true).build()
+        updateStatus("Requesting companion access for ${device.name ?: device.address}…")
+        try {
+            manager.associate(request, object : CompanionDeviceManager.Callback() {
+                @Deprecated("Android 12 callback")
+                override fun onDeviceFound(chooserLauncher: IntentSender) {
+                    startIntentSenderForResult(chooserLauncher, REQUEST_ASSOCIATION, null, 0, 0, 0)
+                }
+
+                override fun onFailure(error: CharSequence?) {
+                    runOnUiThread {
+                        pendingCompanionAddress = null
+                        updateStatus("Could not associate your Mac: ${error ?: "unknown error"}. Check Bluetooth is on and try again.")
+                    }
+                }
+            }, null)
+        } catch (error: Exception) {
+            pendingCompanionAddress = null
+            updateStatus("Could not associate your Mac: ${error.message}")
+        }
+    }
+
+    private fun saveCompanion(address: String) {
+        prefs.edit().putString(Constants.KEY_COMPANION_ADDRESS, address).apply()
+        pendingCompanionAddress = null
+        try {
+            getSystemService(CompanionDeviceManager::class.java).startObservingDevicePresence(address)
+            updateStatus("Mac associated as a companion device.")
+        } catch (error: Exception) {
+            updateStatus("Mac associated, but could not start presence observation: ${error.message}")
+        }
     }
 
     /**
@@ -125,10 +185,15 @@ class MainActivity : Activity() {
     @Suppress("DEPRECATION")
     private fun restoreSystemCompanionAssociation() {
         val manager = getSystemService(CompanionDeviceManager::class.java)
-        val address = prefs.getString(Constants.KEY_COMPANION_ADDRESS, null)
-            ?: manager.associations.firstOrNull()?.also {
-                prefs.edit().putString(Constants.KEY_COMPANION_ADDRESS, it).apply()
-            }
+        val associations = manager.associations
+        // Recover only the Mac explicitly selected in this association flow.
+        // Older broad scans may have recorded a neighbour's device.
+        val address = pendingCompanionAddress?.takeIf { selected ->
+            associations.any { it.equals(selected, ignoreCase = true) }
+        }?.also {
+            prefs.edit().putString(Constants.KEY_COMPANION_ADDRESS, it).apply()
+        }
+            ?: prefs.getString(Constants.KEY_COMPANION_ADDRESS, null)
             ?: return
 
         try {
@@ -141,25 +206,32 @@ class MainActivity : Activity() {
     @Deprecated("Android 12 result API")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_ASSOCIATION) {
+            @Suppress("DEPRECATION")
+            val device = data?.getParcelableExtra<BluetoothDevice>(CompanionDeviceManager.EXTRA_DEVICE)
+            val selected = pendingCompanionAddress
+            @Suppress("DEPRECATION")
+            val associated = selected?.takeIf { address ->
+                getSystemService(CompanionDeviceManager::class.java).associations.any {
+                    it.equals(address, ignoreCase = true)
+                }
+            }
+            if (associated != null) {
+                saveCompanion(associated)
+            } else if (resultCode == RESULT_OK && device != null && device.address.equals(selected, ignoreCase = true)) {
+                saveCompanion(device.address)
+            } else {
+                pendingCompanionAddress = null
+                updateStatus("Mac association was not completed. Tap Associate Mac to try again.")
+            }
+            return
+        }
         if (resultCode != RESULT_OK || data == null) return
         when (requestCode) {
             REQUEST_TREE -> data.data?.let { uri ->
                 contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 prefs.edit().putString(Constants.KEY_TREE_URI, uri.toString()).apply()
                 refreshStatus()
-            }
-            REQUEST_ASSOCIATION -> {
-                @Suppress("DEPRECATION")
-                val device = data.getParcelableExtra<BluetoothDevice>(CompanionDeviceManager.EXTRA_DEVICE)
-                if (device != null) {
-                    prefs.edit().putString(Constants.KEY_COMPANION_ADDRESS, device.address).apply()
-                    try {
-                        getSystemService(CompanionDeviceManager::class.java).startObservingDevicePresence(device.address)
-                        updateStatus("Mac associated as a companion device.")
-                    } catch (error: Exception) {
-                        updateStatus("Could not start presence observation: ${error.message}")
-                    }
-                }
             }
         }
     }

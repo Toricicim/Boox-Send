@@ -162,7 +162,9 @@ bakın.
    eşleştirilmiş BOOX’u seçin ve **Generate** ile sekiz karakterli kod üretin.
 3. BOOX’ta BOOX Send’i açın, aynı kodu kaydedin.
 4. **Choose Destination Folder** ile `Books` klasörünü seçin.
-5. **Associate Mac as Companion Device** düğmesine basıp Mac’i seçin.
+5. **Associate Mac as Companion Device** düğmesine basıp önceden eşleştirilmiş
+   cihazlar listesinden Mac’i seçin ve Android izin ekranını onaylayın.
+   Eşleştirilmemiş çevre cihazları listelenmez.
 6. BOOX uygulama ayarlarında Freeze’i kapatıp App Startup’ı açın. Uygulamanın
    sürekli çalışan bir tarayıcısı yoktur.
 

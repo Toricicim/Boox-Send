@@ -3,6 +3,7 @@
 DerivedData/
 macos/BooxSend.xcodeproj/
 android/.gradle/
+android/.kotlin/
 android/build/
 android/local.properties
 android/app/build/

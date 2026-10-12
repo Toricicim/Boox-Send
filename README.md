@@ -155,7 +155,9 @@ for source installation or Bluetooth transfers.
    tap **Save Code**.
 4. Tap **Choose Destination Folder**, select `Books`, and approve **Use this
    folder**.
-5. Tap **Associate Mac as Companion Device** and select the already-paired Mac.
+5. Tap **Associate Mac as Companion Device**, select your Mac from the list of
+   already-paired devices, and approve the Android companion access prompt.
+   Nearby unpaired devices are not included.
 6. Open BOOX app settings, disable **Freeze** for BOOX Send, and enable **App
    Startup**. These settings let Android deliver the brief boot/presence event;
    they do not keep BOOX Send permanently active.

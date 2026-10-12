@@ -39,7 +39,8 @@ adb install -r BOOX-Send-android.apk
    Code**.
 4. Tap **Choose Destination Folder**, choose `Books`, then approve **Use this
    folder**.
-5. Tap **Associate Mac as Companion Device** and select the already-paired Mac.
+5. Tap **Associate Mac as Companion Device**, select your Mac from the list of
+   already-paired devices, and approve the Android companion access prompt.
 6. In BOOX app settings, disable **Freeze** for BOOX Send and enable **App
    Startup**. This permits brief boot and presence callbacks; it does not keep
    the file receiver continuously active.
@@ -80,6 +81,20 @@ xcode-select --install
   /System/Library/CoreServices/pbs -flush
   /System/Library/CoreServices/pbs -update
   ```
+
+## Companion setup shows neighbours' devices or cannot find a paired Mac
+
+- Update the BOOX APK to **1.0.5 or later**, using the APK from Releases.
+  Earlier versions used an unrestricted nearby-device filter during setup.
+- Keep Bluetooth on both devices and confirm the Mac appears in the BOOX's
+  **paired devices** list in system Bluetooth settings.
+- Tap **Associate Mac as Companion Device** and select your Mac. The app now
+  requests companion access only for that device's Bluetooth address; the Mac
+  does not need to be discoverable again.
+- If the Mac is missing from the paired-device list, complete pairing in system
+  Bluetooth settings first, then return to BOOX Send and try again.
+- Do not approve companion access for an unfamiliar device. You do not need
+  to uninstall the app or reset your saved code and destination folder to update.
 
 ## The BOOX does not wake
 
