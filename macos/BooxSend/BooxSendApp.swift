@@ -18,6 +18,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var settingsWindow: NSWindow?
     private var idleQuitWorkItem: DispatchWorkItem?
+    private let progressPanel = TransferProgressPanel()
+    private var transferProgress = TransferProgress()
     private let logger = Logger(subsystem: "com.aliumutaltas.BooxSend", category: "lifecycle")
 
     func application(_ sender: NSApplication, openFiles filenames: [String]) {
@@ -46,16 +48,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AppUpdater.shared.onChange = { [weak self] in self?.rebuildMenu() }
         AppUpdater.shared.check(manual: false)
         DistributedNotificationCenter.default().addObserver(
-            self, selector: #selector(queueChanged), name: BooxConstants.queueNotification, object: nil
+            self, selector: #selector(queueChanged(_:)), name: BooxConstants.queueNotification, object: nil
         )
         TransferCoordinator.shared.onIdle = { [weak self] in
             self?.coordinatorBecameIdle()
+        }
+        progressPanel.retry = { [weak self] in self?.retry() }
+        TransferCoordinator.shared.onProgress = { [weak self] progress in
+            guard let self else { return }
+            self.transferProgress = progress
+            self.progressPanel.update(progress)
+            self.rebuildMenu()
+            if progress.isActive { self.cancelAutomaticQuit() }
         }
         NSAppleEventManager.shared().setEventHandler(
             self, andSelector: #selector(handleURL(_:withReplyEvent:)),
             forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL)
         )
-        TransferCoordinator.shared.processQueue()
+        TransferCoordinator.shared.processQueue(retryFailed: true)
 
         let defaults = UserDefaults(suiteName: BooxConstants.appGroup)
         let deviceAddress = defaults?.string(forKey: "deviceAddress")
@@ -66,16 +76,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         UpdateReceipt.reportPendingResult()
     }
 
-    @objc private func queueChanged() {
+    @objc private func queueChanged(_ notification: Notification? = nil) {
         cancelAutomaticQuit()
+        if let jobs = try? SharedQueue.shared.jobs() {
+            transferProgress.remainingFiles = jobs.filter { $0.state != .completed }.reduce(0) { $0 + $1.remainingFiles.count }
+            transferProgress.failedFiles = jobs.filter { $0.state == .failed }.reduce(0) { $0 + $1.remainingFiles.count }
+        }
         rebuildMenu()
-        TransferCoordinator.shared.processQueue()
+        TransferCoordinator.shared.processQueue(retryFailed: notification?.userInfo?["retryFailed"] as? Bool == true)
     }
 
     private func coordinatorBecameIdle() {
         DispatchQueue.main.async { [weak self] in
             self?.rebuildMenu()
-            self?.scheduleAutomaticQuit()
+            if !TransferCoordinator.shared.isProcessing { self?.scheduleAutomaticQuit() }
         }
     }
 
@@ -109,8 +123,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func retry() {
         cancelAutomaticQuit()
-        TransferCoordinator.shared.processQueue()
+        TransferCoordinator.shared.processQueue(retryFailed: true)
     }
+    @objc private func showProgress() { progressPanel.show() }
     @objc private func openSettings() {
         logger.notice("Opening settings window")
         if settingsWindow == nil {
@@ -129,12 +144,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func checkForUpdates() { AppUpdater.shared.check(manual: true) }
 
     private func rebuildMenu() {
-        let pending = (try? SharedQueue.shared.jobs().filter { $0.state != .completed }.count) ?? 0
+        guard statusItem != nil else { return }
         let menu = NSMenu()
-        let count = NSMenuItem(title: "Pending transfer jobs: \(pending)", action: nil, keyEquivalent: "")
+        let count = NSMenuItem(title: "Queued files: \(transferProgress.remainingFiles) · Needs attention: \(transferProgress.failedFiles)", action: nil, keyEquivalent: "")
         count.isEnabled = false
         menu.addItem(count)
-        menu.addItem(item("Retry", action: #selector(retry), key: "r"))
+        menu.addItem(item("Show Transfer", action: #selector(showProgress), key: ""))
+        let retryItem = item("Retry", action: #selector(retry), key: "r")
+        retryItem.isEnabled = !TransferCoordinator.shared.isProcessing && transferProgress.remainingFiles > 0
+        menu.addItem(retryItem)
+        statusItem?.button?.title = transferProgress.isActive ? "BOOX ↑" : transferProgress.phase == .failed ? "BOOX !" : "BOOX"
         menu.addItem(item("Settings…", action: #selector(openSettings), key: ","))
         let updateTitle = AppUpdater.shared.availableVersion.map { "Update to \($0)…" } ?? "Check for Updates…"
         let updateItem = item(AppUpdater.shared.isBusy ? "Checking / downloading update…" : updateTitle,
@@ -156,6 +175,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         logger.notice("Automatic quit scheduled after 60 idle seconds")
         let workItem = DispatchWorkItem { [weak self] in
             guard let self else { return }
+            if TransferCoordinator.shared.isProcessing { return }
             if AppUpdater.shared.isBusy || NSApp.windows.contains(where: { $0.isVisible && $0.canBecomeKey }) {
                 self.logger.notice("Automatic quit postponed while a window is visible")
                 self.scheduleAutomaticQuit()

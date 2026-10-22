@@ -3,6 +3,24 @@
 All notable changes are documented here. This project follows Semantic
 Versioning where practical.
 
+## 1.1.0 - 2026-10-22
+
+- Add a minimal non-activating Mac transfer panel with whole-queue byte progress,
+  filename, reconnect/verification states, and receiver-confirmed **Done**.
+- Reuse one authenticated connection across pending jobs instead of closing the
+  BOOX receiver between files. Guard reentrant connection/SDP callbacks so they
+  cannot restart discovery or open duplicate channels.
+- Automatically retry interrupted sessions with bounded backoff and stable IDs;
+  persist each verified file so confirmed files are not replayed after a restart.
+- Isolate failed jobs, continue later pending work, refresh live file counts,
+  preserve high-resolution job order, and prevent automatic quit during transfers.
+- Deduplicate unchanged still-queued files across concurrent Finder helpers and
+  clean up incomplete staging safely without touching source files.
+- Do not re-arm the BOOX idle timeout when companion events arrive during an
+  active transfer. No new permanent services or periodic wake-ups are added.
+- Add hardware-independent regression tests for retry, batching, progress,
+  failure isolation, queue compatibility, staging cleanup, and Bluetooth reentrancy.
+
 ## 1.0.7 - 2026-10-12
 
 - Always fetch fresh release metadata for manual update checks. Failed automatic

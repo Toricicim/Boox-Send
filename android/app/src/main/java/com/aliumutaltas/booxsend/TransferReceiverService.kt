@@ -11,8 +11,10 @@ class TransferReceiverService : Service() {
     private lateinit var listener: RfcommListener
     private val handler = Handler(Looper.getMainLooper())
     private val stopAfterIdle = Runnable {
-        Log.i("BooxSend", "Temporary receiver window expired")
-        stopSelf()
+        if (!transferActive) {
+            Log.i("BooxSend", "Temporary receiver window expired")
+            stopSelf()
+        }
     }
 
     override fun onCreate() {
@@ -44,7 +46,9 @@ class TransferReceiverService : Service() {
 
     private fun scheduleIdleTimeout() {
         handler.removeCallbacks(stopAfterIdle)
-        handler.postDelayed(stopAfterIdle, RECEIVER_WINDOW_MS)
+        // Companion/ACL events can re-deliver onStartCommand during a large
+        // transfer. Never re-arm the idle deadline while that session is active.
+        if (!transferActive) handler.postDelayed(stopAfterIdle, RECEIVER_WINDOW_MS)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null

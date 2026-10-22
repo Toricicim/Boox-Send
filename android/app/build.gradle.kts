@@ -7,8 +7,8 @@ val releaseKeystore = System.getenv("BOOX_SEND_KEYSTORE")
 val releaseKeystorePassword = System.getenv("BOOX_SEND_KEYSTORE_PASSWORD")
 val releaseKeyAlias = System.getenv("BOOX_SEND_KEY_ALIAS")
 val releaseKeyPassword = System.getenv("BOOX_SEND_KEY_PASSWORD")
-val appVersion = "1.0.7"
-val appVersionCode = 8
+val appVersion = "1.1.0"
+val appVersionCode = 10
 val updaterFixture = providers.gradleProperty("booxUpdaterFixture").orNull == "true"
 check(!updaterFixture || (gradle.startParameter.taskNames.isNotEmpty() && gradle.startParameter.taskNames.all {
     it.substringAfterLast(':') in setOf("assembleDebug", "testDebugUnitTest", "clean")

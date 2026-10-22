@@ -19,15 +19,41 @@ enum BluetoothTransferError: LocalizedError {
     }
 }
 
-final class RFCOMMConnector: NSObject {
+protocol TransferConnection: AnyObject {
+    func send(_ frame: Frame) throws
+    func wait(for expected: FrameType, timeout: TimeInterval) throws -> Frame
+    func close()
+}
+
+protocol TransferConnecting: AnyObject {
+    func connect(completion: @escaping (Result<TransferConnection, Error>) -> Void)
+}
+
+struct DiscoveryAttemptGate {
+    private var queried = false
+    private var opened = false
+    mutating func beginQuery() -> Bool {
+        guard !queried else { return false }
+        queried = true
+        return true
+    }
+    mutating func beginChannel() -> Bool {
+        guard queried, !opened else { return false }
+        opened = true
+        return true
+    }
+}
+
+final class RFCOMMConnector: NSObject, TransferConnecting {
     private let logger = Logger(subsystem: "com.aliumutaltas.BooxSend", category: "rfcomm")
     private let device: IOBluetoothDevice
-    private var completion: ((Result<RFCOMMConnection, Error>) -> Void)?
+    private var completion: ((Result<TransferConnection, Error>) -> Void)?
     private var timeoutWorkItem: DispatchWorkItem?
+    private var discovery = DiscoveryAttemptGate()
 
     init(device: IOBluetoothDevice) { self.device = device }
 
-    func connect(completion: @escaping (Result<RFCOMMConnection, Error>) -> Void) {
+    func connect(completion: @escaping (Result<TransferConnection, Error>) -> Void) {
         self.completion = completion
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
@@ -53,6 +79,7 @@ final class RFCOMMConnector: NSObject {
     }
 
     @objc func connectionComplete(_ remoteDevice: IOBluetoothDevice!, status: IOReturn) {
+        guard completion != nil else { return }
         logger.debug("Bluetooth baseband connection callback returned \(status, privacy: .public)")
         guard status == kIOReturnSuccess || device.isConnected() else {
             finish(.failure(BluetoothTransferError.channelOpenFailed(status)))
@@ -62,17 +89,25 @@ final class RFCOMMConnector: NSObject {
     }
 
     private func startSDPQuery() {
-        guard completion != nil else { return }
-        // Query the full SDP record. The UUID-filtered overload is unreliable
-        // with some Android/macOS combinations; the record is filtered below.
-        let result = device.performSDPQuery(self)
-        logger.debug("SDP query start returned \(result, privacy: .public)")
-        if result != kIOReturnSuccess {
-            finish(.failure(BluetoothTransferError.serviceUnavailable))
+        // performSDPQuery can itself deliver connectionComplete again. Starting
+        // another query there cancelled/restarted discovery in a callback loop.
+        guard completion != nil, discovery.beginQuery() else { return }
+        // ACL_CONNECTED wakes Android's temporary receiver asynchronously. An
+        // immediate query raced its SDP registration and sometimes never called
+        // back. Give that receiver one bounded second to advertise its service.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+            guard let self, self.completion != nil else { return }
+            // The UUID-filtered overload is unreliable on some BOOX firmware.
+            let result = self.device.performSDPQuery(self)
+            self.logger.debug("SDP query start returned \(result, privacy: .public)")
+            if result != kIOReturnSuccess {
+                self.finish(.failure(BluetoothTransferError.serviceUnavailable))
+            }
         }
     }
 
     @objc func sdpQueryComplete(_ remoteDevice: IOBluetoothDevice!, status: IOReturn) {
+        guard completion != nil else { return }
         logger.debug("SDP query callback returned \(status, privacy: .public)")
         guard status == kIOReturnSuccess,
               let uuid = serviceUUID(),
@@ -86,6 +121,7 @@ final class RFCOMMConnector: NSObject {
             finish(.failure(BluetoothTransferError.serviceUnavailable))
             return
         }
+        guard discovery.beginChannel() else { return }
         let connection = RFCOMMConnection()
         var channel: IOBluetoothRFCOMMChannel?
         let result = device.openRFCOMMChannelSync(&channel, withChannelID: channelID, delegate: connection)
@@ -104,7 +140,13 @@ final class RFCOMMConnector: NSObject {
         return IOBluetoothSDPUUID(data: data)
     }
 
-    private func finish(_ result: Result<RFCOMMConnection, Error>) {
+    private func finish(_ result: Result<TransferConnection, Error>) {
+        // A late SDP callback must never disconnect a subsequent attempt.
+        guard let callback = completion else {
+            if case .success(let connection) = result { connection.close() }
+            return
+        }
+        completion = nil
         timeoutWorkItem?.cancel()
         timeoutWorkItem = nil
         if case .failure = result, device.isConnected() {
@@ -113,13 +155,11 @@ final class RFCOMMConnector: NSObject {
             // ACL_CONNECTED event, which wakes BOOX's temporary receiver.
             device.closeConnection()
         }
-        let callback = completion
-        completion = nil
-        callback?(result)
+        callback(result)
     }
 }
 
-final class RFCOMMConnection: NSObject, IOBluetoothRFCOMMChannelDelegate {
+final class RFCOMMConnection: NSObject, IOBluetoothRFCOMMChannelDelegate, TransferConnection {
     private var channel: IOBluetoothRFCOMMChannel?
     private let condition = NSCondition()
     private let accumulator = FrameAccumulator()
@@ -129,8 +169,15 @@ final class RFCOMMConnection: NSObject, IOBluetoothRFCOMMChannelDelegate {
     func attach(_ channel: IOBluetoothRFCOMMChannel) { self.channel = channel }
 
     func close() {
-        _ = channel?.close()
+        let previous = channel
         channel = nil
+        setTerminalError(BluetoothTransferError.channelClosed)
+        DispatchQueue.main.async {
+            let device = previous?.getDevice()
+            _ = previous?.close()
+            // BOOX needs a fresh ACL_CONNECTED event for the next receiver window.
+            _ = device?.closeConnection()
+        }
     }
 
     func send(_ frame: Frame) throws {

@@ -4,6 +4,8 @@ import Foundation
 struct UpdaterTests {
     @MainActor static func main() {
         precondition(AppUpdater.isNewer("v1.0.10", than: "1.0.9"))
+        precondition(AppUpdater.isNewer("v1.1.0", than: "1.0.8"))
+        precondition(!AppUpdater.isNewer("v1.0.99", than: "1.1.0"))
         precondition(AppUpdater.isNewer("v2.0.0", than: "1.99.99"))
         precondition(!AppUpdater.isNewer("v1.0.6", than: "1.0.6"))
         precondition(!AppUpdater.isNewer("v1.0.5", than: "1.0.6"))

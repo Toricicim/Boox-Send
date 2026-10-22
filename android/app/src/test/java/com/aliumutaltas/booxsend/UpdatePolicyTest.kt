@@ -6,6 +6,8 @@ import org.junit.Test
 class UpdatePolicyTest {
     @Test fun versionsAreComparedNumericallyAndDowngradesAreRejected() {
         assertTrue(UpdatePolicy.isNewer("v1.0.10", "1.0.9"))
+        assertTrue(UpdatePolicy.isNewer("v1.1.0", "1.0.8"))
+        assertFalse(UpdatePolicy.isNewer("v1.0.99", "1.1.0"))
         assertFalse(UpdatePolicy.isNewer("v1.0.6", "1.0.6"))
         assertFalse(UpdatePolicy.isNewer("v1.0.5", "1.0.6"))
         assertFalse(UpdatePolicy.isNewer("v1.0.7-beta", "1.0.6"))

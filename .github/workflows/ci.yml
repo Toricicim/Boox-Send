@@ -25,6 +25,8 @@ jobs:
         run: ./scripts/build-macos.sh
       - name: Test updater version handling
         run: sh scripts/test-macos-updater.sh
+      - name: Test transfer queue, retries and progress
+        run: sh scripts/test-macos-transfers.sh
       - name: Test update installation and rollback
         run: sh scripts/test-macos-update-install.sh
       - name: Verify signature

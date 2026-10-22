@@ -32,7 +32,8 @@ final class ActionRequestHandler: NSObject, NSExtensionRequestHandling {
                     throw NSError(domain: "BooxSendFinder", code: 1, userInfo: [NSLocalizedDescriptionKey: "No files selected"])
                 }
                 _ = try SharedQueue.shared.enqueue(urls: urls)
-                DistributedNotificationCenter.default().post(name: BooxConstants.queueNotification, object: nil)
+                DistributedNotificationCenter.default().post(name: BooxConstants.queueNotification, object: nil,
+                    userInfo: ["retryFailed": true])
                 DispatchQueue.main.async {
                     if let url = URL(string: "booxsend://queue") { NSWorkspace.shared.open(url) }
                     context.completeRequest(returningItems: [], completionHandler: nil)

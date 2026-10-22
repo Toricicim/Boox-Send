@@ -49,6 +49,8 @@ for architecture in $architectures; do
         "$project_root/macos/BooxSend/ConfigurationStore.swift" \
         "$project_root/macos/BooxSend/RFCOMMConnection.swift" \
         "$project_root/macos/BooxSend/TransferCoordinator.swift" \
+        "$project_root/macos/BooxSend/TransferProgress.swift" \
+        "$project_root/macos/BooxSend/TransferProgressPanel.swift" \
         "$project_root/macos/BooxSend/AppUpdater.swift" \
         "$project_root/macos/BooxSend/UpdateReceipt.swift" \
         "$project_root/macos/BooxSend/BooxSendApp.swift" \

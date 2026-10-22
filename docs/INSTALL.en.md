@@ -54,9 +54,16 @@ adb install -r BOOX-Send-android.apk
 3. Right-click and choose **Quick Actions → Send to BOOX**.
 4. The Quick Action opens the Mac app automatically. Normally you do not need
    to open the BOOX app; opening it starts a two-minute receiver as a fallback.
-5. The BOOX receiver closes immediately after a successful transfer. The Mac
-   app quits 60 seconds after processing becomes idle. Failed jobs remain on
-   disk and are retried the next time the action opens the app.
+5. The small Mac panel shows the filename and byte progress for the entire
+   queue. **Verifying on BOOX…** is not yet success; **Done** requires a verified
+   result for every file. **BOOX → Show Transfer** reopens a hidden panel.
+6. Jobs queued together use the same authenticated connection. Interrupted
+   connections retry automatically a limited number of times with stable file
+   IDs and saved per-file acknowledgements. A failed job does not block later
+   pending work; use **Retry** for files that still need attention.
+7. The BOOX receiver closes after the batch. The Mac app quits 60 seconds after
+   processing becomes idle. Failed jobs remain on disk and are retried once
+   when the app reopens. No retry process wakes a closed app.
 
 ## Source installation
 

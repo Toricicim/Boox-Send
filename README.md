@@ -21,6 +21,8 @@ Bluetooth, without a cloud service, internet connection, or cable.
 - Automatic receiver wake-up after a BOOX reboot through Android Companion
   Device presence; the BOOX app does not need to be opened again.
 - Resume support for interrupted queue jobs and SHA-256 verification.
+- A small Mac progress panel with byte-based queue progress, automatic reconnects,
+  and **Done** only after BOOX has verified every file.
 - Collision-safe names such as `book (1).pdf` instead of overwriting files.
 - A temporary blocking RFCOMM listener with no periodic scan, alarm, or refresh
   loop.
@@ -81,7 +83,9 @@ Neither side is designed to remain open continuously:
 - **Mac:** the Finder Quick Action adds the selected files to the local queue
   and opens BOOX Send automatically. The app transfers the queue, then quits
   after 60 seconds with no active processing. A failed job remains on disk, but
-  the app still quits; the next Quick Action launch retries the queue. The
+  the app still quits; reopening the app retries retained failures once. While
+  it is open, **Retry** explicitly retries them; new pending work is not blocked
+  by failed jobs. Transient disconnections get bounded automatic retries. The
   automatic quit is postponed while the Settings window is visible.
 - **BOOX:** the setup screen does not open during a normal transfer. Android
   uses the paired Mac's Companion or protected Bluetooth connection event to
@@ -172,8 +176,15 @@ for source installation or Bluetooth transfers.
    choose **Customize…** or return to **System Settings → General → Login Items
    & Extensions → Finder** and enable it.
 4. The Mac app opens automatically. You do not need to open the BOOX app.
-5. After the queue finishes, the Mac app quits after 60 idle seconds. The BOOX
-   receiver closes immediately after the transfer.
+5. A small panel shows the current filename and progress for the whole queue.
+   **Verifying on BOOX…** means the bytes have been sent, but the device has not
+   confirmed the file yet. **Done** means every queued file was verified.
+   Close the panel without cancelling the transfer, or reopen it from
+   **BOOX → Show Transfer**. Errors stay queued with a **Retry** button.
+6. Pending jobs share one authenticated Bluetooth connection. The receiver
+   closes after the batch; the Mac app quits after 60 idle seconds. No transfer
+   retry scheduler runs while either app is closed. Repeating Send for the same
+   unchanged, still-queued file reuses its transfer ID rather than adding a copy.
 
 ### One-command source installation
 

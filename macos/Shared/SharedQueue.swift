@@ -1,5 +1,6 @@
 import Foundation
 import OSLog
+import Darwin
 
 struct TransferJob: Codable, Identifiable, Sendable {
     enum State: String, Codable, Sendable { case pending, sending, completed, failed }
@@ -9,6 +10,13 @@ struct TransferJob: Codable, Identifiable, Sendable {
     var files: [QueuedFile]
     var state: State
     var error: String?
+    // Optional for backwards-compatible decoding of queues created before 1.1.0.
+    var completedFileIDs: Set<UUID>? = nil
+    // Old ISO-8601 metadata rounded to whole seconds, scrambling jobs queued
+    // close together. Keep high-resolution ordering without breaking old builds.
+    var enqueueOrder: TimeInterval? = nil
+
+    var remainingFiles: [QueuedFile] { files.filter { !(completedFileIDs ?? []).contains($0.id) } }
 }
 
 struct QueuedFile: Codable, Identifiable, Sendable {
@@ -32,6 +40,9 @@ enum SharedQueueError: LocalizedError {
 
 final class SharedQueue {
     static let shared = SharedQueue()
+    private let rootOverride: URL?
+
+    init(root: URL? = nil) { rootOverride = root }
 
     private let fm = FileManager.default
     private let logger = Logger(subsystem: "com.aliumutaltas.BooxSend", category: "queue")
@@ -49,6 +60,7 @@ final class SharedQueue {
 
     private var root: URL {
         get throws {
+            if let rootOverride { return rootOverride }
 #if BOOX_LOCAL_ADHOC
             return fm.homeDirectoryForCurrentUser
                 .appendingPathComponent("Library/Application Support/BOOX Send/Queue", isDirectory: true)
@@ -62,19 +74,53 @@ final class SharedQueue {
     }
 
     func enqueue(urls: [URL]) throws -> TransferJob {
+        // Finder may launch several helpers concurrently. Serialize duplicate detection
+        // across processes; job metadata itself is still published atomically.
+        let queueRoot = try root
+        try fm.createDirectory(at: queueRoot, withIntermediateDirectories: true)
+        let lock = open(queueRoot.appendingPathComponent(".enqueue.lock").path, O_CREAT | O_RDWR, 0o600)
+        guard lock >= 0 else { throw POSIXError(.EIO) }
+        defer { flock(lock, LOCK_UN); close(lock) }
+        guard flock(lock, LOCK_EX) == 0 else { throw POSIXError(.EIO) }
+        let existing = try jobs().filter { $0.state != .completed }
         let jobID = UUID()
         let jobDirectory = try root.appendingPathComponent(jobID.uuidString, isDirectory: true)
         try fm.createDirectory(at: jobDirectory, withIntermediateDirectories: true)
+        var published = false
+        defer { if !published { try? fm.removeItem(at: jobDirectory) } }
 
         var files: [QueuedFile] = []
-        for source in urls where source.hasDirectoryPath == false {
+        var reused: TransferJob?
+        for source in urls {
+            let accessed = source.startAccessingSecurityScopedResource()
+            defer { if accessed { source.stopAccessingSecurityScopedResource() } }
+            guard try source.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile == true else { continue }
             let id = UUID()
             let stagedName = id.uuidString
             let destination = jobDirectory.appendingPathComponent(stagedName)
-            let accessed = source.startAccessingSecurityScopedResource()
-            defer { if accessed { source.stopAccessingSecurityScopedResource() } }
             try fm.copyItem(at: source, to: destination)
             let values = try destination.resourceValues(forKeys: [.fileSizeKey])
+            if let duplicate = existing.first(where: { job in
+                job.remainingFiles.contains { file in
+                    guard file.originalName == source.lastPathComponent,
+                          file.byteCount == UInt64(values.fileSize ?? 0),
+                          let staged = try? fileURL(jobID: job.id, file: file) else { return false }
+                    return fm.contentsEqual(atPath: staged.path, andPath: destination.path)
+                }
+            }) {
+                try fm.removeItem(at: destination)
+                reused = duplicate
+                // Only the sender may change an existing job's state. A helper
+                // must not overwrite an acknowledgement racing this comparison.
+                continue
+            }
+            if files.contains(where: { file in
+                file.originalName == source.lastPathComponent && file.byteCount == UInt64(values.fileSize ?? 0) &&
+                    fm.contentsEqual(atPath: jobDirectory.appendingPathComponent(file.stagedName).path, andPath: destination.path)
+            }) {
+                try fm.removeItem(at: destination)
+                continue
+            }
             files.append(QueuedFile(
                 id: id,
                 stagedName: stagedName,
@@ -84,12 +130,14 @@ final class SharedQueue {
         }
 
         guard !files.isEmpty else {
-            try? fm.removeItem(at: jobDirectory)
+            if let reused { return reused }
             throw SharedQueueError.noFiles
         }
 
         var job = TransferJob(id: jobID, createdAt: Date(), files: files, state: .pending, error: nil)
+        job.enqueueOrder = job.createdAt.timeIntervalSince1970
         try save(&job)
+        published = true
         return job
     }
 
@@ -98,7 +146,7 @@ final class SharedQueue {
         try fm.createDirectory(at: queueRoot, withIntermediateDirectories: true)
         let directories = try fm.contentsOfDirectory(at: queueRoot, includingPropertiesForKeys: nil)
         logger.notice("Queue path \(queueRoot.path, privacy: .public) contains \(directories.count, privacy: .public) item(s)")
-        return directories.compactMap { directory in
+        return directories.filter { !$0.lastPathComponent.hasPrefix(".") }.compactMap { directory in
                 let metadata = directory.appendingPathComponent("job.json")
                 do {
                     let data = try Data(contentsOf: metadata)
@@ -108,7 +156,11 @@ final class SharedQueue {
                     return nil
                 }
             }
-            .sorted { $0.createdAt < $1.createdAt }
+            .sorted {
+                let lhs = $0.enqueueOrder ?? $0.createdAt.timeIntervalSince1970
+                let rhs = $1.enqueueOrder ?? $1.createdAt.timeIntervalSince1970
+                return lhs == rhs ? $0.id.uuidString < $1.id.uuidString : lhs < rhs
+            }
     }
 
     func fileURL(jobID: UUID, file: QueuedFile) throws -> URL {
