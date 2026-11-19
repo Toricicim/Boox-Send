@@ -4,6 +4,8 @@ Right-click one or more files on a Mac and choose **Quick Actions → Send to
 BOOX** to transfer them to the `Books` folder of a BOOX Go 10.3 over
 Bluetooth, without a cloud service, internet connection, or cable.
 
+![BOOX Send demo: send a PDF and EPUB from Finder and see them appear in the Books folder on a BOOX Go 10.3](docs/media/boox-send-demo.gif)
+
 > This project grew out of a real need: sending an occasional file from a Mac
 > to a BOOX was needlessly awkward. It was developed with an AI-assisted
 > **vibe-coding** workflow and tested iteratively on real hardware. It is being
